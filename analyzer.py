@@ -26,6 +26,24 @@ def convert_hm_to_dt(raw_date, raw_time):
     return dt.datetime.strptime(dt_string, '%d%m%y %H%M%S')
 
 
+def metersToFeet(meters: int):
+    return int(round(float(meters) * 3.28084))
+
+
+def kmToMiles(km: float):
+    return km * 0.6213712
+
+
+def msToFpm(ms: float):
+    return ms * 196.85
+
+
+# def format_timedelta(td):
+#     minutes, seconds = divmod(td.seconds + td.days * 86400, 60)
+#     hours, minutes = divmod(minutes, 60)
+#     return '{:d}:{:02d}:{:02d}'.format(hours, minutes, seconds)
+
+
 def haversine(lon1, lat1, lon2, lat2):
     """
     Calculate the great circle distance in kilometers between two points
@@ -63,32 +81,53 @@ def instructions():
     return filename
 
 
+def display(summary):
+    formatted_date = (f"{summary['flight_date'][2:4]}-{summary['flight_date'][0:2]}-{summary['flight_date'][4:6]}")
+    formatted_duration = str(dt.timedelta(seconds=summary["duration"]))
+
+    print("\nSummary Statistics:")
+    print(f" Date: {formatted_date}")
+    print(f" Duration: {formatted_duration}")
+    print(f" Distance: {summary['total_distance']} km / {kmToMiles(summary['total_distance'])} mi")
+    print(f" Max Altitude: {summary['max_alt']} m / {metersToFeet(summary['max_alt'])} ft")
+    print(f" Max Lift: {summary['max_lift']} m/s / {msToFpm(summary['max_lift'])} ft/min")
+    print(f" Max Sink: {summary['max_sink']} m/s / {msToFpm(summary['max_sink'])} ft/min")
+    print("-------------------------------------\n")
+
+
 def load_igc(in_igc_file):
     f = open(in_igc_file, "r")
     lines = f.readlines()
 
+    raw_utc_date = None
+    takeoff_dt: None
+    landing_dt: None
+    raw_time = 0
+    takeoff_lat: float = 0.00
+    takeoff_lon: float = 0.00
+    takeoff_alt_m: float = 0.00  # meters
+    alt_readings: float = []
+    high_alt_m: int = 0
+    high_lift_m: float = 0.00
+    high_sink_m: float = 0.00
+    dist_total: float = 0.00
+    duration: int = 0  # seconds of flight
+
+    first_takeoff_flag = True
+
     for line in lines:
-        print(line, end="")
-        raw_utc_date = None
-        raw_time: None
         last_lat: float = 0.00
         last_lon: float = 0.00
-        takeoff_dt: float = 0.00
-        takeoff_lat: float = 0.00
-        takeoff_lon: float = 0.00
-        takeoff_alt_m: float = 0.00  # meters
-        alt_readings: float = []
-        high_alt_m: int = 0
-        high_lift_m: float = 0.00
-        high_sink_m: float = 0.00
-        dist_total: float = 0.00
 
         if line[:5] ==  "HFDTE":
-            raw_utc_date = line[5:]
+            raw_utc_date = line[5:].replace("\n", "")
 
         elif line[0] == "B":
-
             raw_time = line[1:7]
+            if first_takeoff_flag is True:
+                takeoff_dt = convert_hm_to_dt(raw_utc_date, raw_time)
+                first_takeoff_flag = False
+
             lat = float(line[7:14]) / 100000.00
             ns = line[14]
             if ns == "S":
@@ -121,29 +160,38 @@ def load_igc(in_igc_file):
                 else:
                     alt_readings.append(float(alt_m))
 
-                # distance & times
-                if last_lat == 0.00 and lat > 0.00:
-                    takeoff_lat = lat
-                    takeoff_lon = lon
-                    takeoff_dt = convert_hm_to_dt(raw_utc_date, raw_time)
-                    takeoff_alt_m = alt_m
-                elif last_lat > 0:
-                    dist_km = haversine(last_lon, last_lat, lon, lat)
-                    dist_total += abs(dist_km)
+            # set values
+            last_lat = lat
+            last_lon = lon
+            if alt_m > high_alt_m:
+                high_alt_m = alt_m
 
-                # set values
-                last_lat = lat
-                last_lon = lon
-                if alt_m > high_alt_m:
-                    high_alt_m = alt_m
+            # distance & times
+            if last_lat == 0.00 and lat > 0.00:
+                takeoff_lat = lat
+                takeoff_lon = lon
+                takeoff_alt_m = alt_m
+            elif last_lat > 0:
+                dist_km = haversine(last_lon, last_lat, lon, lat)
+                dist_total += abs(dist_km)
+
 
     distFromTakeoff = haversine(takeoff_lon, takeoff_lat, last_lon, last_lat)
 
     # duration
     landing_dt = convert_hm_to_dt(raw_utc_date, raw_time)
-    # flight_duration = landingDT.timeIntervalSince(takeoffDT)
-    #if flightDuration < 0  {
-    #flightDuration = flightDuration + (24 * 60 * 60)
+    duration = (landing_dt - takeoff_dt).total_seconds()
+    if duration < 0:
+        duration = duration + (24 * 60 * 60)
+
+    summary = {"flight_date": raw_utc_date,
+               "max_alt": high_alt_m,
+               "max_lift": high_lift_m,
+               "max_sink" : high_sink_m,
+               "total_distance": dist_total,
+               "duration": duration}
+
+    return summary
 
 
 def write_file(outfile):
@@ -158,4 +206,5 @@ def write_file(outfile):
 if __name__ == '__main__':
     in_file = instructions()
     in_file = "2023-02-27-XFH-000-01.IGC"
-    load_igc(in_file)
+    summary = load_igc(in_file)
+    display(summary)
