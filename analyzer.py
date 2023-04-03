@@ -62,19 +62,19 @@ def instructions():
     # Optional
     # file = sys.argv[1]
     # print(f"File: {file}")
-    print("-------------------------------------")
-    print("--   IGC Log File Analyzer         --")
-    print("--   Wander Expeditions LLC        --")
-    print("--   v2023-03                      --")
-    print("--   Randall Shane PhD             --")
-    print("--   Randall@WanderExpeditions.com --")
-    print("-------------------------------------\n")
+    print("-----------------------------------------------------")
+    print("--   IGC Log File Analyzer  (v2023-04)             --")
+    print("--   Wander Expeditions LLC                        --")
+    print("--   Randall Shane PhD                             --")
+    print("--   Randall@WanderExpeditions.com                 --")
+    print("--   https:/github.com/RandallShanePhD/LogAnalyzer --")
+    print("---------------------------------------------------\n")
     print("Instructions:")
     print("1) Place your IGC file in this directory")
     print("2) Type the filename in exactly as you see it")
 
     while True:
-        filename = input(">")
+        filename = input("> ")
         if os.path.isfile(filename):
             print(f" {filename}")
             return filename
@@ -94,7 +94,7 @@ def display(summary):
     print(f" Max Altitude: {summary['max_alt']} m || {meters_to_feet(summary['max_alt'])} ft")
     print(f" Max Lift: {summary['max_lift']} m/s || {msToFpm(summary['max_lift'])} ft/min")
     print(f" Max Sink: {summary['max_sink']} m/s || {msToFpm(summary['max_sink'])} ft/min")
-    print("-------------------------------------\n")
+    print("---------------------------------------------------\n")
 
 
 def load_igc(in_igc_file):
@@ -180,7 +180,6 @@ def load_igc(in_igc_file):
                 dist_km = haversine(last_lon, last_lat, lon, lat)
                 dist_total += abs(dist_km)
 
-
     distFromTakeoff = haversine(takeoff_lon, takeoff_lat, last_lon, last_lat)
 
     # duration
@@ -212,6 +211,5 @@ def write_file(outfile):
 
 if __name__ == '__main__':
     in_file = instructions()
-    # in_file = "2023-02-27-XFH-000-01.IGC"
     summary = load_igc(in_file)
     display(summary)
