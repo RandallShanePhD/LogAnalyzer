@@ -147,7 +147,7 @@ def load_igc(in_igc_file):
             if lon != 0.00 and last_lon != 0.00 \
                 and lat != 0.00 and last_lon != 0.00 \
                 and lat != last_lat and lon != last_lon:
-                travelled = haversine(last_lon, last_lat, lon, lat, no_round=True)
+                travelled = haversine(lon, lat, last_lon, last_lat, no_round=True)
                 total_distance_m += travelled
 
             last_lat = lat
