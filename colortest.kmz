@@ -4,6 +4,7 @@
 <Document>
 <name>Paths</name>
 <description>Examples of path with altitude.</description>
+
 <Placemark id="ID_00000">
 <name>Flight Track - B</name>
 <description>Red line section</description>
