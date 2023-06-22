@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"
+     xmlns:gx="http://www.google.com/kml/ext/2.2"><Document>
+<name>Randall Shane</name>
+<description>slovenia_test IGC file with color coded altitude.</description>
+<Placemark id = "ID_0163">
+<name>Flight Track</name>
+<description> orange line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff0080ff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_0268">
+<name>Flight Track</name>
+<description> yellow line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff00ffff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_0287">
+<name>Flight Track</name>
+<description> orange line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff0080ff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_0305">
+<name>Flight Track</name>
+<description> yellow line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff00ffff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_0309">
+<name>Flight Track</name>
+<description> orange line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff0080ff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_0343">
+<name>Flight Track</name>
+<description> yellow line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff00ffff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_0558">
+<name>Flight Track</name>
+<description> green line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff00ff00</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_0669">
+<name>Flight Track</name>
+<description> yellow line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff00ffff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_0877">
+<name>Flight Track</name>
+<description> orange line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff0080ff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_0940">
+<name>Flight Track</name>
+<description> red line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff0000ff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_01107">
+<name>Flight Track</name>
+<description> orange line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff0080ff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_01219">
+<name>Flight Track</name>
+<description> yellow line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff00ffff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_01567">
+<name>Flight Track</name>
+<description> orange line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff0080ff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_01643">
+<name>Flight Track</name>
+<description> red line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff0000ff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_01813">
+<name>Flight Track</name>
+<description> orange line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff0080ff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_01886">
+<name>Flight Track</name>
+<description> yellow line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff00ffff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_02047">
+<name>Flight Track</name>
+<description> orange line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff0080ff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_02242">
+<name>Flight Track</name>
+<description> yellow line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff00ffff</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+<Placemark id = "ID_02407">
+<name>Flight Track</name>
+<description> green line section </description>
+<Snippet maxLines="0"></Snippet>
+<Style>
+<LineStyle>
+<color>ff00ff00</color>
+<width>2</width>
+</LineStyle>
+</Style>
+<LineString>
+<extrude>0</extrude>
+<tessellate>1</tessellate>
+<altitudeMode>absolute</altitudeMode>
+<coordinates>
+
+</coordinates>
+</LineString>
+</Placemark>
+</Document>
+</kml>
