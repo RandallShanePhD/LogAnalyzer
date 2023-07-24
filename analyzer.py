@@ -73,29 +73,31 @@ def bearing(loc1, loc2):
 
 # Operational Functions -----------------------/
 def create_kmz(kmz_data):
-    out_file = f"{kmz_data['filename']}.kmz"
+    out_file = f"KMZs/{kmz_data['filename']}.kmz"
     if os.path.exists(out_file):
         os.remove(out_file)
 
     # breakpoints for highlighting in m
     highlight = {}
-    colors = {"green" : "ff00ff00",
-              "yellow": "ff00ffff",
+    colors = {"yellow": "ff00ffff",
               "orange": "ff0080ff",
               "red": "ff0000ff"}
+
+    names = {"yellow": "Low",
+              "orange": "Medium",
+              "red": "High"}
 
     altis = [int(x[2]) for x in kmz_data["lon_lat_alt_list"] if int(x[2]) > 0]
     max_alti = max(altis)
     min_alti = min(altis)
     diff = (max_alti - min_alti) / 4
-    highlight[int(min_alti + diff)] = "green"
     highlight[int(min_alti + (diff * 2))] = "yellow"
     highlight[int(min_alti + (diff * 3))] = "orange"
-    highlight[int(max_alti * .9)] = "red"
+    highlight[int(min_alti + (diff * 4)) - 10] = "red"
 
     # Color code the Coordinates
     def color_alti(alti):
-        color = "green"
+        color = "yellow"
         for h_alti in highlight:
             if alti > h_alti:
                 color = highlight[h_alti]
@@ -125,17 +127,15 @@ def create_kmz(kmz_data):
         if current_color == last_color:
             block.append(f"{coord[0]},{coord[1]},{coord[2]}")
         else:
-            block = []
-            last_color = current_color
             # KMZ Data
             f.write(f'<Placemark id = "ID_0{i}">\n')  # ID number
-            f.write('<name>Flight Track</name>\n')  # track name
-            f.write(f'<description> {last_color} line section </description>\n')  # description
+            f.write(f'<name>{names[current_color]} Track</name>\n')  # track name
+            f.write(f'<description> {current_color} line section </description>\n')  # description
             f.write('<Snippet maxLines="0"></Snippet>\n')
             f.write('<Style>\n')
             f.write('<LineStyle>\n')
-            f.write(f'<color>{colors[last_color]}</color>\n')  # color
-            f.write('<width>2</width>\n')  # line thickness
+            f.write(f'<color>{colors[current_color]}</color>\n')  # color
+            f.write('<width>3</width>\n')  # line thickness
             f.write('</LineStyle>\n')
             f.write('</Style>\n')
             f.write('<LineString>\n')
@@ -148,6 +148,8 @@ def create_kmz(kmz_data):
             f.write('</coordinates>\n')
             f.write('</LineString>\n')
             f.write('</Placemark>\n')
+            last_color = current_color
+            block = []
 
     # Write File Tail
     f.write('</Document>\n')
@@ -167,14 +169,19 @@ def instructions():
     print("Instructions:")
     print("- Place your IGC file in this directory")
     print("- Select the file number from this list:")
+    print("(r = Re-scan Directory / s = Settings / x = Exit)")
 
-    files = [x for x in os.listdir(".") if x.split(".")[-1] in ["IGC", "igc"]]
-    files = [x for x in files if os.path.isfile(x)]
+    files = []
+    for file_name in os.listdir("Logs"):
+        if file_name.split(".")[-1] in ["IGC", "igc"]:
+            file_path = f"Logs/{file_name}"
+            if os.path.isfile(file_path):
+                files.append(file_name)
     files = dict({(str(i + 1), x) for i, x in enumerate(files)})
     files = dict(sorted(files.items(), key=lambda x: x[0]))
-    files["r"] = "Re-scan Directory"
-    files["s"] = "Settings & Analysis Notes"
-    files["x"] = "Exit"
+    # files["r"] = "Re-scan Directory"
+    # files["s"] = "Settings & Analysis Notes"
+    # files["x"] = "Exit"
     for file_num in files:
         print(f"\t{file_num} - {files[file_num]}")
 
@@ -253,8 +260,8 @@ def load_igc(in_igc_file):
     # 0 123456 78901234 567890123 4 56789 01234 5678901234567890
     # R TTTTTT DDMMSSSC DDDMMSSSC V PPPPP GGGGG AAA SS NNN CRLF
     # B 050818 2801340N 08344054E A 01638 01639 001 10 002 3130139
-
-    f = open(in_igc_file, "r")
+    in_file = f"Logs/{in_igc_file}"
+    f = open(in_file, "r")
     lines = f.readlines()
 
     pilot: str = ""
@@ -445,22 +452,3 @@ if __name__ == '__main__':
         if in_file is not None:
             summary = load_igc(in_file)
             display_summary_stats(summary)
-
-
-
-# Test File - Slovenia
-# 2 June 2023 - 11:46am
-# duration 50min
-# takeoff 4058'
-# land 853'
-# horiz distance 3.4mile
-# distance covered 18.9mile / 30.42km
-# max alti 4144'
-# max lift 866fpm
-# max sink -753fpm
-
-# max ground speed 34.2mph
-# flat triangle 8.2mile
-# open distance 5.5mile
-# free dist (5 point) 10.1mile
-# FAI triangle 7.8mile
