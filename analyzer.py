@@ -492,9 +492,11 @@ def flight_analyzer(analysis_data):
     glides = chunker(glides_temp, "glides")
     sinks = chunker(sinks_temp, "sinks")
 
-    print("Where are we?")
-
-
+    # climbs analysis
+    for climb in climbs:
+        altis = [x[3] for x in climb]
+        climbs = [x[5] for x in climb]
+        print("Where are we?")
 
 
 
