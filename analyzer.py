@@ -10,7 +10,8 @@ from math import asin, atan2, degrees, cos, radians, sin, sqrt
 settings = {
     "averaging_factor": 5,
     "climb_time_threshold": 10,
-    "glide_time_threshold": 30,
+    "climb_ascend_threshold": 0.5,
+    "glide_time_threshold": 15,
     "sink_time_threshold": 7,
     "sink_descend_threshold": 2.5,
     }
@@ -71,7 +72,6 @@ def bearing(loc1, loc2):
     return int((bearing + 360) % 360)
 
 
-# Operational Functions -----------------------/
 def create_kmz(kmz_data):
     out_file = f"KMZs/{kmz_data['filename']}.kmz"
     if os.path.exists(out_file):
@@ -157,10 +157,11 @@ def create_kmz(kmz_data):
     f.close()
 
 
+# Operational Functions -----------------------/
 def instructions():
     print("\n")
     print("-----------------------------------------------------")
-    print("--   IGC Log File Analyzer  (v2023-06)             --")
+    print("--   IGC Log File Analyzer  (v2024-05)             --")
     print("--   Wander Expeditions LLC                        --")
     print("--   Randall Shane PhD                             --")
     print("--   Randall@WanderExpeditions.com                 --")
@@ -179,9 +180,6 @@ def instructions():
                 files.append(file_name)
     files = dict({(str(i + 1), x) for i, x in enumerate(files)})
     files = dict(sorted(files.items(), key=lambda x: x[0]))
-    # files["r"] = "Re-scan Directory"
-    # files["s"] = "Settings & Analysis Notes"
-    # files["x"] = "Exit"
     for file_num in files:
         print(f"\t{file_num} - {files[file_num]}")
 
@@ -235,6 +233,10 @@ def display_settings():
             param = input("Input new number of Climbing seconds: ")
             if param.isnumeric():
                 settings['climb_time_threshold'] = int(param)
+        elif selection == "M":
+            param = input("Input new m/s Climbing thresholh as a decimal (ex: 2.5): ")
+            if param.isnumeric():
+                settings['climb_ascend_threshold'] = float(param)
         elif selection == "G":
             param = input("Input new number of Gliding seconds: ")
             if param.isnumeric():
@@ -246,7 +248,7 @@ def display_settings():
         elif selection == "D":
             param = input("Input new Sink Descent threshold as a decimal (ex: 3.1): ")
             if param.replace(".", "").isnumeric():
-                settings['climb_time_threshold'] = float(param)
+                settings['sink_descend_threshold'] = float(param)
         else:
             print(f"\t** Unknown selection - returning to main menu! **")
     except Exception as exc:
@@ -273,6 +275,8 @@ def load_igc(in_igc_file):
     takeoff_lat: float = 0.00
     takeoff_lon: float = 0.00
     takeoff_alt_m: float = 0.00  # meters
+    climb_sink: float = 0.00
+    heading: float = 0.00
     takeoff_heading: int = 0
     alt_readings: float = []
     travelled: float = 0.00
@@ -289,19 +293,17 @@ def load_igc(in_igc_file):
 
     takeoff_flag = True
     analysis_data = []
-    climbs = []
     climb_readings = 0
-    glides = []
     glide_readings = 0
 
     for i, line in enumerate(lines):
-        if line[:5] ==  "HFPLT":
+        if line[:5] ==  "HFPLT":  # pilot data
             pilot = line[11:].replace("\n", "")
 
-        if line[:5] ==  "HFDTE":
+        if line[:5] ==  "HFDTE":  # date info
             raw_utc_date = line[5:].replace("\n", "")
 
-        elif line[0] == "B":
+        elif line[0] == "B":  # data lines start with 'B'
             raw_time = line[1:7]
 
             lat = float(line[7:14]) / 100000
@@ -313,6 +315,19 @@ def load_igc(in_igc_file):
             ew = line[23]
             if ew == "W":
                 lon = lon * -1
+
+            # GPS & Decimal places
+            # 100s = non zero = longitude
+            # 10s = 1000km
+            # 1s = 111km
+            # 1 decimal = 11.1km
+            # 2 decimals = 1.1km
+            # 3 decimals = 110m
+            # 4 decimals = 11m
+            # 5 decimals = 1.1m
+            # 6 decimals = 11cm
+            # 7 decimals = 1.1cm (surveying, limit of GPS tech)
+
 
             # total distance
             travelled = haversine((last_lat, last_lon), (lat, lon))
@@ -360,28 +375,14 @@ def load_igc(in_igc_file):
                 alt_readings.append(float(alt_m))
 
             # Analysis - Climbs & Glides
-            a_data = (raw_time, lat, lon, alt_m)
+            a_data = (int(raw_time), lat, lon, alt_m, heading, climb_sink)
             analysis_data.append(a_data)
 
-            # count climbs and glides
-            # if alt_m > last_alt:
-            #     climb_readings += 1
-            # elif alt_m == last_alt:
-            #     glide_readings += 1
-            # elif alt_m < last_alt:
-            #     if calc_lift_sink([last_alt, alt_m]) > settings["sink_descend_threshold"]:
-            #         glide_readings += 1
-            #         climb_readings = 0
-            #
-            #
-            # if climb_readings > settings["climb_time_threshold"]
-            #     glide_readings = 0
-
-            # "climb_time_threshold": 10,
-            # "glide_time_threshold": 30,
-            # "sink_time_threshold": 7,
-            # : 2.5,
-
+            # Count climbs and glides
+            if alt_m > last_alt:
+                climb_readings += 1
+            elif alt_m <= last_alt:
+                glide_readings += 1
 
             # set values
             if alt_m > high_alt_m:
@@ -396,6 +397,8 @@ def load_igc(in_igc_file):
     duration = (landing_dt - takeoff_dt).total_seconds()
     if duration < 0:
         duration = duration + (24 * 60 * 60)
+
+    analysis = flight_analyzer(analysis_data)
 
     kmz_data = {"pilot": pilot,
                 "filename": in_igc_file[:-4],
@@ -419,6 +422,80 @@ def load_igc(in_igc_file):
                "duration": duration}
 
     return summary
+
+
+def flight_analyzer(analysis_data):
+    # from settings
+    # "climb_time_threshold": 10,
+    # "climb_ascend_threshold": 0.5, (0.5 m/s + or you're not really climbing)
+    # "glide_time_threshold": 15,
+    # "sink_time_threshold": 7,
+    # "sink_descend_threshold": 2.5,
+    climbs_temp = []
+    glides_temp = []
+    sinks_temp = []
+
+    for i, line in enumerate(analysis_data):
+        alt_m = line[3]
+
+        # analyze for climbs
+        if i > settings["climb_time_threshold"]:
+            compared_to_entry = i - settings["climb_time_threshold"]
+            if alt_m > analysis_data[compared_to_entry][3]:
+                climb_sink = [x[5] for x in analysis_data[compared_to_entry:i]]
+                # you must climb more than 1/3rd of the time over the ascending threshold else it's not a climb!
+                if len([x for x in climb_sink if x > settings["climb_ascend_threshold"]]) > (len(climb_sink) / 3):
+                    climbs_temp.extend(analysis_data[compared_to_entry:i])
+
+        if i > settings["glide_time_threshold"]:
+            compared_to_entry = i - settings["glide_time_threshold"]
+            if alt_m <= analysis_data[compared_to_entry][3]:
+                glides_temp.extend(analysis_data[compared_to_entry:i])
+
+        if i > settings["sink_time_threshold"]:
+            compared_to_entry = i - settings["sink_time_threshold"]
+            if alt_m < analysis_data[compared_to_entry][3]:
+                climb_sink = [x[5] for x in analysis_data[compared_to_entry:i]]
+                if len([x for x in climb_sink if x > settings["sink_descend_threshold"]]) > (i - compared_to_entry) / 3:
+                    sinks_temp.extend(analysis_data[compared_to_entry:i])
+
+    # Create unique c,g & s
+    def chunker(array, tyype):
+        # tyype: climbs, glides, sinks
+        temp = list(set(array))
+        temp.sort(key=lambda row: row[0])
+        bulk, block = [], []
+
+        for i, entry in enumerate(temp):
+            if i > 0:
+                if entry[0] - temp[i - 1][0] == 1:
+                    block.append(entry)
+                else:
+                    if tyype == "climbs":
+                        if len(block) > settings["climb_time_threshold"]:
+                            actual_climbs = [x[5] for x in block if x[5] > settings["climb_ascend_threshold"]]
+                            if len(actual_climbs) > len(block) / 3:
+                                bulk.append(block)
+                    elif tyype == "glides":
+                        if len(block) > settings["glide_time_threshold"]:
+                            bulk.append(block)
+                    elif tyype == "sinks":
+                        if len(block) > settings["sink_time_threshold"]:
+                            actual_sinks = [x[5] for x in block if x[5] > settings["sink_descend_threshold"]]
+                            if len(actual_sinks) > len(block) / 2:  # must be sinking half the time
+                                bulk.append(block)
+                    block = []
+
+        return bulk
+
+    climbs = chunker(climbs_temp, "climbs")
+    glides = chunker(glides_temp, "glides")
+    sinks = chunker(sinks_temp, "sinks")
+
+    print("Where are we?")
+
+
+
 
 
 def display_summary_stats(summary):
