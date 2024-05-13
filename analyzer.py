@@ -419,7 +419,12 @@ def load_igc(in_igc_file):
                "landing_heading": landing_heading,
                "total_distance": round(total_distance_km, 1),
                "takeoff_to_land_dist": round(takeoff_to_land_dist, 1),
-               "duration": duration}
+               "duration": duration,
+               "climbs_num": analysis["climbs_num"],
+               "glides_num": analysis["glides_num"],
+               "sinks_num": analysis["sinks_num"],
+               "climbs_grade": analysis["climb_grade"],
+               "glide_grade": analysis["glide_grade"]}
 
     return summary
 
@@ -456,7 +461,7 @@ def flight_analyzer(analysis_data):
             compared_to_entry = i - settings["sink_time_threshold"]
             if alt_m < analysis_data[compared_to_entry][3]:
                 climb_sink = [x[5] for x in analysis_data[compared_to_entry:i]]
-                if len([x for x in climb_sink if x > settings["sink_descend_threshold"]]) > (i - compared_to_entry) / 3:
+                if len([x for x in climb_sink if x > settings["sink_descend_threshold"]]) > 1:
                     sinks_temp.extend(analysis_data[compared_to_entry:i])
 
     # Create unique c,g & s
@@ -488,16 +493,39 @@ def flight_analyzer(analysis_data):
 
         return bulk
 
-    climbs = chunker(climbs_temp, "climbs")
-    glides = chunker(glides_temp, "glides")
-    sinks = chunker(sinks_temp, "sinks")
+    all_climbs = chunker(climbs_temp, "climbs")
+    all_glides = chunker(glides_temp, "glides")
+    all_sinks = chunker(sinks_temp, "sinks")
 
     # climbs analysis
-    for climb in climbs:
-        altis = [x[3] for x in climb]
-        climbs = [x[5] for x in climb]
-        print("Where are we?")
+    climbing_grades = []
+    for single_climb in all_climbs:
+        altis = [x[3] for x in single_climb]
+        climbing = 0
+        for i in range(len(altis)):
+            if i > 0 and altis[i] >= altis[i - 1]:
+                climbing += 1
+        climbing_grades.append(round(float(climbing / i), 2))
+    climb_grade = round(stat.mean(climbing_grades) * 100, 1)
 
+    # glides analysis
+    gliding_grades = []
+    for single_glide in all_glides:
+        altis = [x[3] for x in single_glide]
+        gliding = 0
+        for i in range(len(altis)):
+            if i > 0 and altis[i] - altis[i - 1] < settings["sink_descend_threshold"]:
+                gliding += 1
+        gliding_grades.append(round(float(gliding / i), 2))
+    glide_grade = round(stat.mean(gliding_grades) * 100, 1)
+
+    analysis_data = {"climbs_num": len(all_climbs),
+                     "glides_num": len(all_glides),
+                     "sinks_num": len(all_sinks),
+                     "climbs_grade": climb_grade,
+                     "glide_grade": glide_grade}
+
+    return analysis_data
 
 
 def display_summary_stats(summary):
@@ -520,6 +548,8 @@ def display_summary_stats(summary):
     print(f" Max Altitude: {summary['max_alt']} m || {meters_to_feet(summary['max_alt'])} ft")
     print(f" Max Lift: {summary['max_lift']} m/s || {msToFpm(summary['max_lift'])} ft/min")
     print(f" Max Sink: {summary['max_sink']} m/s || {msToFpm(summary['max_sink'])} ft/min")
+    print("- - - - - -\n")
+    # analysis data
     print("---------------------------------------------------\n")
     print("[return] to continue")
     input()
