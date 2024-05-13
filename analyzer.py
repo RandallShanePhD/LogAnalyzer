@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import datetime as dt
+import numpy as np
 import os
 import statistics as stat
 import sys
@@ -20,6 +21,7 @@ settings = {
 # Reference Functions ---------------------------/
 def calc_lift_sink(altitudes: [float]) -> float:
     # Remove any outliers over 2 sd
+    value = 0
     try:
         meters_per_second = [float(t - s) for s, t in zip(altitudes, altitudes[1:])]
         sd = stat.stdev(meters_per_second)
@@ -206,9 +208,7 @@ def display_settings():
     print("  goal is to determine the consistency of climbing by evaluating the changes in ")
     print("  the rate of climb. It also seeks to determine how efficiently a pilot is ")
     print("  gliding by averaging the L/D for the glides and deriving a deviation rating ")
-    print("  per glide. These are subsequently evaluated with a weighted average where ")
-    print("  climbing is worth 2x and gliding is worth 1x. The final number is a 0-100% ")
-    print("  flight efficiency rating.\n")
+    print("  per glide. These are subsequently graded; climb, glide and # sink events provided.\n")
     print("--------------------------------------------------------------------------------")
     print(f"  A: Lift/Sink Averaging Factor == {settings['averaging_factor']}")
     print("     - Number of seconds used to average lift & sink.")
@@ -262,6 +262,7 @@ def load_igc(in_igc_file):
     # 0 123456 78901234 567890123 4 56789 01234 5678901234567890
     # R TTTTTT DDMMSSSC DDDMMSSSC V PPPPP GGGGG AAA SS NNN CRLF
     # B 050818 2801340N 08344054E A 01638 01639 001 10 002 3130139
+    global alt_m
     in_file = f"Logs/{in_igc_file}"
     f = open(in_file, "r")
     lines = f.readlines()
@@ -278,14 +279,14 @@ def load_igc(in_igc_file):
     climb_sink: float = 0.00
     heading: float = 0.00
     takeoff_heading: int = 0
-    alt_readings: float = []
+    alt_readings: [float] = []
     travelled: float = 0.00
     high_alt_m: int = 0
     high_lift_m: float = 0.00
     high_sink_m: float = 0.00
     last_lat: float = 0.00
     last_lon: float = 0.00
-    last_alt: int = 0.00
+    last_alt: int = 0
     landing_alt_m: float = 0.00
     landing_heading: int = 0
     total_distance_km = 0.00
@@ -400,10 +401,10 @@ def load_igc(in_igc_file):
 
     analysis = flight_analyzer(analysis_data)
 
-    kmz_data = {"pilot": pilot,
-                "filename": in_igc_file[:-4],
-                "lon_lat_alt_list": lon_lat_alt_list}
-    create_kmz(kmz_data)
+    # kmz_data = {"pilot": pilot,
+    #             "filename": in_igc_file[:-4],
+    #             "lon_lat_alt_list": lon_lat_alt_list}
+    # create_kmz(kmz_data)
 
     summary = {"filename": in_igc_file,
                "pilot": pilot,
@@ -423,7 +424,7 @@ def load_igc(in_igc_file):
                "climbs_num": analysis["climbs_num"],
                "glides_num": analysis["glides_num"],
                "sinks_num": analysis["sinks_num"],
-               "climbs_grade": analysis["climb_grade"],
+               "climb_grade": analysis["climb_grade"],
                "glide_grade": analysis["glide_grade"]}
 
     return summary
@@ -448,12 +449,13 @@ def flight_analyzer(analysis_data):
             compared_to_entry = i - settings["climb_time_threshold"]
             if alt_m > analysis_data[compared_to_entry][3]:
                 climb_sink = [x[5] for x in analysis_data[compared_to_entry:i]]
-                # you must climb more than 1/3rd of the time over the ascending threshold else it's not a climb!
+                # you must climb more than 1/3rd of the time over the ascending threshold else it's not a climb
                 if len([x for x in climb_sink if x > settings["climb_ascend_threshold"]]) > (len(climb_sink) / 3):
                     climbs_temp.extend(analysis_data[compared_to_entry:i])
 
         if i > settings["glide_time_threshold"]:
             compared_to_entry = i - settings["glide_time_threshold"]
+            # everything that is not a climb is a glide including sinks which will be later ruled out
             if alt_m <= analysis_data[compared_to_entry][3]:
                 glides_temp.extend(analysis_data[compared_to_entry:i])
 
@@ -461,6 +463,7 @@ def flight_analyzer(analysis_data):
             compared_to_entry = i - settings["sink_time_threshold"]
             if alt_m < analysis_data[compared_to_entry][3]:
                 climb_sink = [x[5] for x in analysis_data[compared_to_entry:i]]
+                # you need 1 sink reading in excess of the sink descending threshold for it to be analyzed as a sink
                 if len([x for x in climb_sink if x > settings["sink_descend_threshold"]]) > 1:
                     sinks_temp.extend(analysis_data[compared_to_entry:i])
 
@@ -487,7 +490,8 @@ def flight_analyzer(analysis_data):
                     elif tyype == "sinks":
                         if len(block) > settings["sink_time_threshold"]:
                             actual_sinks = [x[5] for x in block if x[5] > settings["sink_descend_threshold"]]
-                            if len(actual_sinks) > len(block) / 2:  # must be sinking half the time
+                            # must be sinking half the time to be an actual sink event
+                            if len(actual_sinks) > len(block) / 2:
                                 bulk.append(block)
                     block = []
 
@@ -506,7 +510,11 @@ def flight_analyzer(analysis_data):
             if i > 0 and altis[i] >= altis[i - 1]:
                 climbing += 1
         climbing_grades.append(round(float(climbing / i), 2))
-    climb_grade = round(stat.mean(climbing_grades) * 100, 1)
+    climb_grade = 0.0
+    try:
+        climb_grade = round(stat.mean(climbing_grades) * 100, 1)
+    except Exception:
+        pass
 
     # glides analysis
     gliding_grades = []
@@ -517,12 +525,16 @@ def flight_analyzer(analysis_data):
             if i > 0 and altis[i] - altis[i - 1] < settings["sink_descend_threshold"]:
                 gliding += 1
         gliding_grades.append(round(float(gliding / i), 2))
-    glide_grade = round(stat.mean(gliding_grades) * 100, 1)
+    glide_grade = 0.0
+    try:
+        glide_grade = round(stat.mean(gliding_grades) * 100, 1)
+    except Exception:
+        pass
 
     analysis_data = {"climbs_num": len(all_climbs),
                      "glides_num": len(all_glides),
                      "sinks_num": len(all_sinks),
-                     "climbs_grade": climb_grade,
+                     "climb_grade": climb_grade,
                      "glide_grade": glide_grade}
 
     return analysis_data
@@ -548,8 +560,14 @@ def display_summary_stats(summary):
     print(f" Max Altitude: {summary['max_alt']} m || {meters_to_feet(summary['max_alt'])} ft")
     print(f" Max Lift: {summary['max_lift']} m/s || {msToFpm(summary['max_lift'])} ft/min")
     print(f" Max Sink: {summary['max_sink']} m/s || {msToFpm(summary['max_sink'])} ft/min")
-    print("- - - - - -\n")
-    # analysis data
+    print("Analysis:")
+    print(f" Number of Climbs: {summary['climbs_num']}")
+    print(f" Climb Efficiency: {summary['climb_grade']}%")
+    print(f" Number of Glides: {summary['glides_num']}")
+    print(f" Glide Efficiency: {summary['glide_grade']}%")
+    print(f" Number of Sinks: {summary['sinks_num']}")
+    ratio = round(summary['climbs_num'] / (summary['climbs_num'] + summary['glides_num'] + summary['sinks_num']) * 100, 2)
+    print(f" You are climbing {ratio}% of the flight")
     print("---------------------------------------------------\n")
     print("[return] to continue")
     input()
