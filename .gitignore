@@ -1,8 +1,9 @@
 # Byte-compiled / optimized / DLL files
 
-# Don't save *.igc files
+# Don't save *.igc & *.kmz files
 *.igc
 *.IGC
+*.kmz
 
 __pycache__/
 *.py[cod]
