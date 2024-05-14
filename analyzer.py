@@ -15,6 +15,7 @@ settings = {
     "glide_time_threshold": 15,
     "sink_time_threshold": 7,
     "sink_descend_threshold": 2.5,
+    "kmz_speed_units": "kmh"
     }
 
 
@@ -37,6 +38,7 @@ def calc_lift_sink(altitudes: [float]) -> float:
 
 
 def convert_hm_to_dt(raw_date, raw_time):
+    raw_date = raw_date.replace("DATE:", "")  # flymaster encoding
     dt_string = f"{raw_date} {raw_time}"
     return dt.datetime.strptime(dt_string, '%d%m%y %H%M%S')
 
@@ -75,88 +77,18 @@ def bearing(loc1, loc2):
 
 
 def create_kmz(kmz_data):
-    out_file = f"KMZs/{kmz_data['filename']}.kmz"
-    if os.path.exists(out_file):
-        os.remove(out_file)
+    # kmz_data = {"pilot": pilot,
+    #             "filename": in_igc_file[:-4]}
+    infile = f"Logs/{kmz_data['filename']}"
+    outfile = f"KMZs/{kmz_data['filename'][:-4]}.kmz"
+    if os.path.exists(outfile):
+        os.remove(outfile)
 
-    # breakpoints for highlighting in m
-    highlight = {}
-    colors = {"yellow": "ff00ffff",
-              "orange": "ff0080ff",
-              "red": "ff0000ff"}
-
-    names = {"yellow": "Low",
-              "orange": "Medium",
-              "red": "High"}
-
-    altis = [int(x[2]) for x in kmz_data["lon_lat_alt_list"] if int(x[2]) > 0]
-    max_alti = max(altis)
-    min_alti = min(altis)
-    diff = (max_alti - min_alti) / 4
-    highlight[int(min_alti + (diff * 2))] = "yellow"
-    highlight[int(min_alti + (diff * 3))] = "orange"
-    highlight[int(min_alti + (diff * 4)) - 10] = "red"
-
-    # Color code the Coordinates
-    def color_alti(alti):
-        color = "yellow"
-        for h_alti in highlight:
-            if alti > h_alti:
-                color = highlight[h_alti]
-        return color
-
-    coordinates = []
-    for coord in kmz_data["lon_lat_alt_list"]:
-        alti = coord[2]
-        color = color_alti(alti)
-        coord = (coord[0], coord[1], coord[2], color)
-        coordinates.append(coord)
-
-    # Write File Header
-    f = open(out_file, "a")
-    f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-    f.write('''<kml xmlns="http://www.opengis.net/kml/2.2"
-     xmlns:gx="http://www.google.com/kml/ext/2.2">''')
-    f.write('<Document>\n')
-    f.write(f'<name>{kmz_data["pilot"]}</name>\n')
-    f.write(f'<description>{kmz_data["filename"]} IGC file with color coded altitude.</description>\n')
-
-    # Block and write the color coded coordinates for plotting
-    block = []
-    last_color = coordinates[0][3]
-    for i, coord in enumerate(coordinates):
-        current_color = coord[3]
-        if current_color == last_color:
-            block.append(f"{coord[0]},{coord[1]},{coord[2]}")
-        else:
-            # KMZ Data
-            f.write(f'<Placemark id = "ID_0{i}">\n')  # ID number
-            f.write(f'<name>{names[current_color]} Track</name>\n')  # track name
-            f.write(f'<description> {current_color} line section </description>\n')  # description
-            f.write('<Snippet maxLines="0"></Snippet>\n')
-            f.write('<Style>\n')
-            f.write('<LineStyle>\n')
-            f.write(f'<color>{colors[current_color]}</color>\n')  # color
-            f.write('<width>3</width>\n')  # line thickness
-            f.write('</LineStyle>\n')
-            f.write('</Style>\n')
-            f.write('<LineString>\n')
-            f.write('<extrude>0</extrude>\n')
-            f.write('<tessellate>1</tessellate>\n')
-            f.write('<altitudeMode>absolute</altitudeMode>\n')
-            f.write('<coordinates>\n')
-            writable_block = " ".join(block)
-            f.write(f'{writable_block}\n')  # coordinate block
-            f.write('</coordinates>\n')
-            f.write('</LineString>\n')
-            f.write('</Placemark>\n')
-            last_color = current_color
-            block = []
-
-    # Write File Tail
-    f.write('</Document>\n')
-    f.write('</kml>\n')
-    f.close()
+    from igc2kml import parse_igc, process_data, write_kml
+    data, meta_data = parse_igc(infile)
+    data, meta_data = process_data(data, meta_data, speed_unit=settings['kmz_speed_units'])
+    meta_data["pilot"] = kmz_data["pilot"]
+    write_kml(outfile, data, meta_data)
 
 
 # Operational Functions -----------------------/
@@ -220,6 +152,9 @@ def display_settings():
     print("     - Number of seconds of continuing sink to be labeled sinking.")
     print(f"  D: Sink Descend Threshold == {settings['sink_descend_threshold']}")
     print("     - Meters/second threshold to be considered sinking.")
+    print(f"  E: KMZ File Speed Units == {settings['kmz_speed_units']}")
+    print("     - Units of measure for speed in KMZ file. Options: m/s, kmh, mph, kts")
+
     print("\n Select letter to edit, x to return")
     selection = input()
     try:
@@ -249,6 +184,12 @@ def display_settings():
             param = input("Input new Sink Descent threshold as a decimal (ex: 3.1): ")
             if param.replace(".", "").isnumeric():
                 settings['sink_descend_threshold'] = float(param)
+        elif selection == "E":
+            param = input("Input new KMZ units: m/s, kmh, mph, kts ")
+            if param in ['m/s', 'kmh', 'mph', 'kts']:
+                settings['kmz_speed_units'] = param
+            else:
+                print(f"\t** Unknown units selection - try again! **")
         else:
             print(f"\t** Unknown selection - returning to main menu! **")
     except Exception as exc:
@@ -298,8 +239,12 @@ def load_igc(in_igc_file):
     glide_readings = 0
 
     for i, line in enumerate(lines):
-        if line[:5] ==  "HFPLT":  # pilot data
-            pilot = line[11:].replace("\n", "")
+        if line[:5] ==  "HFPLT":  # xc tracer pilot data
+            offset =11
+            if line[:19] == "HFPLTPILOTINCHARGE:":  # flymaster pilot data
+                offset = 19
+
+            pilot = line[offset:].replace("\n", "")
 
         if line[:5] ==  "HFDTE":  # date info
             raw_utc_date = line[5:].replace("\n", "")
@@ -401,10 +346,9 @@ def load_igc(in_igc_file):
 
     analysis = flight_analyzer(analysis_data)
 
-    # kmz_data = {"pilot": pilot,
-    #             "filename": in_igc_file[:-4],
-    #             "lon_lat_alt_list": lon_lat_alt_list}
-    # create_kmz(kmz_data)
+    kmz_data = {"pilot": pilot,
+                "filename": in_igc_file}
+    create_kmz(kmz_data)
 
     summary = {"filename": in_igc_file,
                "pilot": pilot,
@@ -568,7 +512,7 @@ def display_summary_stats(summary):
     print(f" Number of Sinks: {summary['sinks_num']}")
     ratio = round(summary['climbs_num'] / (summary['climbs_num'] + summary['glides_num'] + summary['sinks_num']) * 100, 2)
     print(f" You are climbing {ratio}% of the flight")
-    print("---------------------------------------------------\n")
+    print("------------------------------------------\n")
     print("[return] to continue")
     input()
 

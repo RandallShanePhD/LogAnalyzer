@@ -25,3 +25,8 @@
 - Definition: consecutive readings greater than <sink_time_threshold>
 - Sustained more than the <sink_descend_threshold>
 - Provided as a number of recorded sinking glides
+
+## IGC2KLM
+- Came from here: 
+- https://github.com/MScherbela/igc2kml
+- Many Thanks!!
