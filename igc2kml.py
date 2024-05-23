@@ -1,5 +1,9 @@
 #!/usr/bin/python3
 #%%
+# This is from here:
+# https://github.com/MScherbela/igc2kml
+# Many thanks!
+
 import datetime
 import dataclasses
 from typing import List, Optional

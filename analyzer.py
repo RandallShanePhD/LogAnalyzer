@@ -9,11 +9,11 @@ from math import asin, atan2, degrees, cos, radians, sin, sqrt
 
 # Constants -------------------------------------/
 settings = {
-    "averaging_factor": 5,
-    "climb_time_threshold": 10,
+    "averaging_factor": 10,
+    # "climb_time_threshold": 10,
     "climb_ascend_threshold": 0.5,
-    "glide_time_threshold": 15,
-    "sink_time_threshold": 7,
+    # "glide_time_threshold": 15,
+    # "sink_time_threshold": 7,
     "sink_descend_threshold": 2.5,
     "kmz_speed_units": "kmh"
     }
@@ -238,6 +238,8 @@ def load_igc(in_igc_file):
     climb_readings = 0
     glide_readings = 0
 
+    model_data = []
+
     for i, line in enumerate(lines):
         if line[:5] ==  "HFPLT":  # xc tracer pilot data
             offset =11
@@ -278,8 +280,12 @@ def load_igc(in_igc_file):
             # total distance
             travelled = haversine((last_lat, last_lon), (lat, lon))
             # print(f"GPS: ({last_lat}, {last_lon}), ({lat}, {lon})\tTravelled: {travelled}")
-            if travelled < .3:
+            if i == 0:
+                travelled = 0
+            elif travelled < .3:
                 total_distance_km += travelled
+            elif travelled > 25:
+                travelled = 0
 
             # get bearing
             if last_lat != 0.00 and last_lon != 0.00 and \
@@ -321,7 +327,7 @@ def load_igc(in_igc_file):
                 alt_readings.append(float(alt_m))
 
             # Analysis - Climbs & Glides
-            a_data = (int(raw_time), lat, lon, alt_m, heading, climb_sink)
+            a_data = (int(f"{raw_utc_date}{raw_time}"), lat, lon, alt_m, heading, travelled)
             analysis_data.append(a_data)
 
             # Count climbs and glides
@@ -334,6 +340,12 @@ def load_igc(in_igc_file):
             if alt_m > high_alt_m:
                 high_alt_m = alt_m
             last_alt = alt_m
+
+            # model data preparation
+            # date, time, latitude, longitude, altitude (m), heading
+            # model_line = [int(raw_utc_date), int(raw_time), lat, lon, alt_m, heading]  # try 1
+            # model_line = [int(f"{raw_utc_date}{raw_time}"), alt_m, climb_sink]  # try 2
+            # model_data.append(model_line)
 
     takeoff_to_land_dist = haversine((takeoff_lat, takeoff_lon), (last_lat, last_lon))
 
@@ -365,123 +377,111 @@ def load_igc(in_igc_file):
                "total_distance": round(total_distance_km, 1),
                "takeoff_to_land_dist": round(takeoff_to_land_dist, 1),
                "duration": duration,
+               # Analysis Data
                "climbs_num": analysis["climbs_num"],
                "glides_num": analysis["glides_num"],
                "sinks_num": analysis["sinks_num"],
                "climb_grade": analysis["climb_grade"],
                "glide_grade": analysis["glide_grade"]}
+               # "model_data": model_data}
 
     return summary
 
 
 def flight_analyzer(analysis_data):
     # from settings
-    # "climb_time_threshold": 10,
-    # "climb_ascend_threshold": 0.5, (0.5 m/s + or you're not really climbing)
-    # "glide_time_threshold": 15,
-    # "sink_time_threshold": 7,
+    # "averaging_factor": 10,
+    # "climb_ascend_threshold": 0.5,
     # "sink_descend_threshold": 2.5,
-    climbs_temp = []
-    glides_temp = []
-    sinks_temp = []
+    analysis_data.sort(key=lambda row: row[0])
+    chunks = []
+    chunk_cat = []
+    blocks = []  # (datetime, lat, lon, alt_m, heading, distance, climb_sink, category)
+    blocks_cat = []
 
+    # Step 1: Chunk into 'averaging_factor' Chunks
+    temp = []
     for i, line in enumerate(analysis_data):
-        alt_m = line[3]
+        # (datetime, lat, lon, alt_m, heading, distance)
+        if i > 0:
+            if i % settings["averaging_factor"] == 0 and i > 0:
+                chunks.append(temp)
+                temp = []
+                temp.append(line)
+            else:
+                temp.append(line)
 
-        # analyze for climbs
-        if i > settings["climb_time_threshold"]:
-            compared_to_entry = i - settings["climb_time_threshold"]
-            if alt_m > analysis_data[compared_to_entry][3]:
-                climb_sink = [x[5] for x in analysis_data[compared_to_entry:i]]
-                # you must climb more than 1/3rd of the time over the ascending threshold else it's not a climb
-                if len([x for x in climb_sink if x > settings["climb_ascend_threshold"]]) > (len(climb_sink) / 3):
-                    climbs_temp.extend(analysis_data[compared_to_entry:i])
+    # Step 2: Analyze for Climb, GLide or Sink
+    for chunk in chunks:
+        altitudes = [x[3] for x in chunk]
+        avg_ls = calc_lift_sink(altitudes)
 
-        if i > settings["glide_time_threshold"]:
-            compared_to_entry = i - settings["glide_time_threshold"]
-            # everything that is not a climb is a glide including sinks which will be later ruled out
-            if alt_m <= analysis_data[compared_to_entry][3]:
-                glides_temp.extend(analysis_data[compared_to_entry:i])
+        # Determine Category: Climb, Glide, Sink
+        if avg_ls > settings["climb_ascend_threshold"]:
+            chunk_cat.append("C")  # ("C", alt_diff, avg_ls, distance_diff))
+        elif avg_ls < (settings["sink_descend_threshold"] * -1):
+            chunk_cat.append("S")  # ("S", alt_diff, avg_ls, distance_diff))
+        else:
+            chunk_cat.append("G")  # ("G", alt_diff, avg_ls, distance_diff))
 
-        if i > settings["sink_time_threshold"]:
-            compared_to_entry = i - settings["sink_time_threshold"]
-            if alt_m < analysis_data[compared_to_entry][3]:
-                climb_sink = [x[5] for x in analysis_data[compared_to_entry:i]]
-                # you need 1 sink reading in excess of the sink descending threshold for it to be analyzed as a sink
-                if len([x for x in climb_sink if x > settings["sink_descend_threshold"]]) > 1:
-                    sinks_temp.extend(analysis_data[compared_to_entry:i])
+    # Step 3: Consolidate contiguous types
+    # chunks[i]: (datetime, lat, lon, alt_m, heading, distance)
+    # chunk_cat[i]: (category)  # , chunk_alt_diff, avg_ls, chunk_distance)
+    temp = []
+    for i in range(len(chunk_cat)):
+        if i > 0:
+            if chunk_cat[i] == chunk_cat[i - 1]:
+                temp = temp + chunks[i]
+            else:
+                # temp.sort(key=lambda x: x[0])
+                blocks.append(temp)
+                avg_ls = calc_lift_sink([x[3] for x in temp])
+                blocks_cat.append((chunk_cat[i - 1], avg_ls))
+                temp = chunks[i]
 
-    # Create unique c,g & s
-    def chunker(array, tyype):
-        # tyype: climbs, glides, sinks
-        temp = list(set(array))
-        temp.sort(key=lambda row: row[0])
-        bulk, block = [], []
-
-        for i, entry in enumerate(temp):
-            if i > 0:
-                if entry[0] - temp[i - 1][0] == 1:
-                    block.append(entry)
-                else:
-                    if tyype == "climbs":
-                        if len(block) > settings["climb_time_threshold"]:
-                            actual_climbs = [x[5] for x in block if x[5] > settings["climb_ascend_threshold"]]
-                            if len(actual_climbs) > len(block) / 3:
-                                bulk.append(block)
-                    elif tyype == "glides":
-                        if len(block) > settings["glide_time_threshold"]:
-                            bulk.append(block)
-                    elif tyype == "sinks":
-                        if len(block) > settings["sink_time_threshold"]:
-                            actual_sinks = [x[5] for x in block if x[5] > settings["sink_descend_threshold"]]
-                            # must be sinking half the time to be an actual sink event
-                            if len(actual_sinks) > len(block) / 2:
-                                bulk.append(block)
-                    block = []
-
-        return bulk
-
-    all_climbs = chunker(climbs_temp, "climbs")
-    all_glides = chunker(glides_temp, "glides")
-    all_sinks = chunker(sinks_temp, "sinks")
-
-    # climbs analysis
+    # Step 4: Analysis
     climbing_grades = []
-    for single_climb in all_climbs:
-        altis = [x[3] for x in single_climb]
-        climbing = 0
-        for i in range(len(altis)):
-            if i > 0 and altis[i] >= altis[i - 1]:
-                climbing += 1
-        climbing_grades.append(round(float(climbing / i), 2))
-    climb_grade = 0.0
-    try:
-        climb_grade = round(stat.mean(climbing_grades) * 100, 1)
-    except Exception:
-        pass
-
-    # glides analysis
     gliding_grades = []
-    for single_glide in all_glides:
-        altis = [x[3] for x in single_glide]
-        gliding = 0
-        for i in range(len(altis)):
-            if i > 0 and altis[i] - altis[i - 1] < settings["sink_descend_threshold"]:
-                gliding += 1
-        gliding_grades.append(round(float(gliding / i), 2))
-    glide_grade = 0.0
-    try:
-        glide_grade = round(stat.mean(gliding_grades) * 100, 1)
-    except Exception:
-        pass
+    sinking_grades = []
+    for i, block in enumerate(blocks):
+        tyype = blocks_cat[i][0]
+        avg_ls = blocks_cat[i][1]
+        if tyype == "C":  # climbs analysis - graded on percent of time altitude increases continuously in climbing block
+            altis = [x[3] for x in block]
+            total_climb = altis[-1] - altis[0]
+            climbing = 0
+            for i, alti in enumerate(altis):
+                if i > 0:
+                    if alti > altis[i - 1]:
+                        climbing += 1
+            climbing_grades.append(round(float(climbing / len(altis)), 2))
 
-    analysis_data = {"climbs_num": len(all_climbs),
-                     "glides_num": len(all_glides),
-                     "sinks_num": len(all_sinks),
-                     "climb_grade": climb_grade,
-                     "glide_grade": glide_grade}
+        elif tyype == "G":  # glides analysis - Calc L/D & aggregate (somehow)
+            altis = [x[3] for x in block]
+            gliding = 0
+            standard_deviation = stat.stdev(altis)
+            mean_altitude = stat.mean(altis)
+        elif tyype == "S":
+            pass
 
-    return analysis_data
+    # Total Grades
+    # try:
+    #     climb_grade = round(stat.mean(climbing_grades) * 100, 1)
+    # except Exception:
+    #     pass
+    #
+    # try:
+    #     glide_grade = round(stat.mean(gliding_grades) * 100, 1)
+    # except Exception:
+    #     pass
+    #
+    # analysis_data = {"climbs_num": len(all_climbs),
+    #                  "glides_num": len(all_glides),
+    #                  "sinks_num": len(all_sinks),
+    #                  "climb_grade": climb_grade,
+    #                  "glide_grade": glide_grade}
+    #
+    # return analysis_data
 
 
 def display_summary_stats(summary):
