@@ -543,7 +543,7 @@ def display_summary_stats(summary):
 def display_details(details):
     print("\nDetailed Blocks:")
     for detail in details:
-        altitude_change = detail['altitude_start_m'] - detail['altitude_end_m']
+        altitude_change = detail['altitude_end_m'] - detail['altitude_start_m']
         print(f" Block Number: {detail['number']}   Block Type: {detail['tyype']}   Time in Secs: {detail['time_secs']}")
         print(f"  Altitude Start {detail['altitude_start_m']}   End {detail['altitude_end_m']}   Change: {altitude_change}   µ Lift: {detail['avg_lift_sink_m/s']}")
         print(f"  Location Start {detail['loc_start']}   End {detail['loc_end']}")
