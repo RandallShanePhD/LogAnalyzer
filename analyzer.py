@@ -479,7 +479,10 @@ def flight_analyzer(analysis_data):
         block_detail["altitude_start_m"] = block[0][3]
         block_detail["altitude_end_m"] = block[-1][3]
         block_detail["avg_lift_sink_m/s"] = blocks_cat[i][1]
+        block_detail["loc_start"] = (block[0][1], block[0][2])
+        block_detail["loc_end"] = (block[-1][1], block[-1][2])
         block_detail["total_distance_m"] = round(sum(x[5] for x in block) * 100)
+
         details.append(block_detail)
 
     # Total Grades
@@ -540,9 +543,12 @@ def display_summary_stats(summary):
 def display_details(details):
     print("\nDetailed Blocks:")
     for detail in details:
+        altitude_change = detail['altitude_start_m'] - detail['altitude_end_m']
         print(f" Block Number: {detail['number']}   Block Type: {detail['tyype']}   Time in Secs: {detail['time_secs']}")
-        print(f" Altitude Start {detail['altitude_start_m']}   End {detail['altitude_end_m']}   µ Lift: {detail['avg_lift_sink_m/s']}   Distance in m: {detail['total_distance_m']}")
-        print("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -")
+        print(f"  Altitude Start {detail['altitude_start_m']}   End {detail['altitude_end_m']}   Change: {altitude_change}   µ Lift: {detail['avg_lift_sink_m/s']}")
+        print(f"  Location Start {detail['loc_start']}   End {detail['loc_end']}")
+        print(f"  Distance Start-End: {round(haversine(detail['loc_start'], detail['loc_end']) * 1000)}m   Distance Total: {detail['total_distance_m']}m")
+        print("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -")
     print("return to continue")
     input()
 
