@@ -382,7 +382,8 @@ def load_igc(in_igc_file):
                "glides_num": analysis["glides_num"],
                "sinks_num": analysis["sinks_num"],
                "climb_grade": analysis["climb_grade"],
-               "glide_grade": analysis["glide_grade"]}
+               "glide_grade": analysis["glide_grade"],
+               "sink_grade": analysis["sink_grade"]}
                # "model_data": model_data}
 
     return summary
@@ -457,31 +458,33 @@ def flight_analyzer(analysis_data):
             climbing_grades.append(round(float(climbing / len(altis)), 2))
 
         elif tyype == "G":  # glides analysis - Calc L/D & aggregate (somehow)
-            altis = [x[3] for x in block]
-            gliding = 0
-            standard_deviation = stat.stdev(altis)
-            mean_altitude = stat.mean(altis)
-        elif tyype == "S":
-            pass
+            lift = block[-1][3] - block[0][3]
+            if lift == 0:
+                lift = 1
+            distance = round(sum(x[5] for x in block) * 1000)
+            l_over_d = abs(round(distance / lift))
+            gliding_grades.append(l_over_d)
+        elif tyype == "S":  # record abs of sink rate
+            sink_rate = abs(blocks_cat[i][1])
+            sinking_grades.append(sink_rate)
+
 
     # Total Grades
-    # try:
-    #     climb_grade = round(stat.mean(climbing_grades) * 100, 1)
-    # except Exception:
-    #     pass
-    #
-    # try:
-    #     glide_grade = round(stat.mean(gliding_grades) * 100, 1)
-    # except Exception:
-    #     pass
-    #
-    # analysis_data = {"climbs_num": len(all_climbs),
-    #                  "glides_num": len(all_glides),
-    #                  "sinks_num": len(all_sinks),
-    #                  "climb_grade": climb_grade,
-    #                  "glide_grade": glide_grade}
-    #
-    # return analysis_data
+    try:
+        climb_grade = round(stat.mean(climbing_grades) * 100, 2)
+        glide_grade = round(stat.mean(gliding_grades), 2)
+        sink_grade = round(stat.mean(sinking_grades), 2)
+    except Exception:
+        pass
+
+    analysis_data = {"climbs_num": len(climbing_grades),
+                     "glides_num": len(gliding_grades),
+                     "sinks_num": len(sinking_grades),
+                     "climb_grade": climb_grade,
+                     "glide_grade": glide_grade,
+                     "sink_grade": sink_grade}
+
+    return analysis_data
 
 
 def display_summary_stats(summary):
@@ -508,8 +511,9 @@ def display_summary_stats(summary):
     print(f" Number of Climbs: {summary['climbs_num']}")
     print(f" Climb Efficiency: {summary['climb_grade']}%")
     print(f" Number of Glides: {summary['glides_num']}")
-    print(f" Glide Efficiency: {summary['glide_grade']}%")
+    print(f" µ L/D on Glide: {summary['glide_grade']}:1")
     print(f" Number of Sinks: {summary['sinks_num']}")
+    print(f" µ Sink Rate: {summary['sink_grade']} m/s")
     ratio = round(summary['climbs_num'] / (summary['climbs_num'] + summary['glides_num'] + summary['sinks_num']) * 100, 2)
     print(f" You are climbing {ratio}% of the flight")
     print("------------------------------------------\n")

@@ -10,21 +10,21 @@
 
 ### Climbs
 - Definition: consecutive readings greater than <climb_time_threshold>
-- Sustained more than 1/3rd of the time over the <climb_ascend_threshold>
 - Efficiency Grade:
-  - Each single climb is graded: number of climbing readings > 0 / total number of readings in the climb
+  - Each single climb is graded
+  - Graded on percent of time altitude increases continuously in climbing block
   - Overall grade is the mean of all climbs grades together
 
 ### Glides
-- Definition: consecutive readings greater than <glide_time_threshold>
+- Definition: not a climb or sink
 - Efficiency Grade:
-  - Each single climb is graded: number of gliding readings > <sink_descend_threshold> / total number of readings
-  - Overall grade is the mean of all glide grades together
+  - Calculates L/D on glide
+  - Overall grade is the mean of L/Ds
 
 ### Sinks
 - Definition: consecutive readings greater than <sink_time_threshold>
 - Sustained more than the <sink_descend_threshold>
-- Provided as a number of recorded sinking glides
+- Overall grade provided as a mean of sink rate
 
 ## IGC2KLM
 - Came from here: 

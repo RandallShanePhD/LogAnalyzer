@@ -3,6 +3,8 @@ import numpy as np
 from sktime.clustering.dbscan import TimeSeriesDBSCAN
 from sktime.dists_kernels import FlatDist, ScipyDist
 
+# PROTOTYPING ONLY - NOT implemented in operations
+
 
 X = np.array(model_data)
 eucl_dist = FlatDist(ScipyDist())
