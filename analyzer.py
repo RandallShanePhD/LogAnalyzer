@@ -383,7 +383,8 @@ def load_igc(in_igc_file):
                "sinks_num": analysis["sinks_num"],
                "climb_grade": analysis["climb_grade"],
                "glide_grade": analysis["glide_grade"],
-               "sink_grade": analysis["sink_grade"]}
+               "sink_grade": analysis["sink_grade"],
+               "details": analysis["details"]}
                # "model_data": model_data}
 
     return summary
@@ -427,7 +428,7 @@ def flight_analyzer(analysis_data):
 
     # Step 3: Consolidate contiguous types
     # chunks[i]: (datetime, lat, lon, alt_m, heading, distance)
-    # chunk_cat[i]: (category)  # , chunk_alt_diff, avg_ls, chunk_distance)
+    # chunk_cat[i]: (category, avg_ls)
     temp = []
     for i in range(len(chunk_cat)):
         if i > 0:
@@ -446,9 +447,8 @@ def flight_analyzer(analysis_data):
     sinking_grades = []
     for i, block in enumerate(blocks):
         tyype = blocks_cat[i][0]
-        avg_ls = blocks_cat[i][1]
+        altis = [x[3] for x in block]
         if tyype == "C":  # climbs analysis - graded on percent of time altitude increases continuously in climbing block
-            altis = [x[3] for x in block]
             total_climb = altis[-1] - altis[0]
             climbing = 0
             for i, alti in enumerate(altis):
@@ -456,7 +456,6 @@ def flight_analyzer(analysis_data):
                     if alti > altis[i - 1]:
                         climbing += 1
             climbing_grades.append(round(float(climbing / len(altis)), 2))
-
         elif tyype == "G":  # glides analysis - Calc L/D & aggregate (somehow)
             lift = block[-1][3] - block[0][3]
             if lift == 0:
@@ -468,21 +467,33 @@ def flight_analyzer(analysis_data):
             sink_rate = abs(blocks_cat[i][1])
             sinking_grades.append(sink_rate)
 
+    # Step 5: Detail Data
+    details = []
+    tyype_lookup = {"G": "Glide", "C": "Climb", "S": "Sink"}
+    for i, block in enumerate(blocks):
+        altis = [x[3] for x in block]
+        block_detail = {}
+        block_detail["number"] = i
+        block_detail["tyype"] = tyype_lookup[blocks_cat[i][0]]
+        block_detail["time_secs"] = len(block)
+        block_detail["altitude_start_m"] = block[0][3]
+        block_detail["altitude_end_m"] = block[-1][3]
+        block_detail["avg_lift_sink_m/s"] = blocks_cat[i][1]
+        block_detail["total_distance_m"] = round(sum(x[5] for x in block) * 100)
+        details.append(block_detail)
 
     # Total Grades
-    try:
-        climb_grade = round(stat.mean(climbing_grades) * 100, 2)
-        glide_grade = round(stat.mean(gliding_grades), 2)
-        sink_grade = round(stat.mean(sinking_grades), 2)
-    except Exception:
-        pass
+    climb_grade = round(stat.mean(climbing_grades) * 100, 2)
+    glide_grade = round(stat.mean(gliding_grades), 2)
+    sink_grade = round(stat.mean(sinking_grades), 2)
 
     analysis_data = {"climbs_num": len(climbing_grades),
                      "glides_num": len(gliding_grades),
                      "sinks_num": len(sinking_grades),
                      "climb_grade": climb_grade,
                      "glide_grade": glide_grade,
-                     "sink_grade": sink_grade}
+                     "sink_grade": sink_grade,
+                     "details": details}
 
     return analysis_data
 
@@ -517,7 +528,22 @@ def display_summary_stats(summary):
     ratio = round(summary['climbs_num'] / (summary['climbs_num'] + summary['glides_num'] + summary['sinks_num']) * 100, 2)
     print(f" You are climbing {ratio}% of the flight")
     print("------------------------------------------\n")
+    print("'D' for detailed flight inspection")
     print("[return] to continue")
+    inp = input()
+    if inp == "D":
+        display_details(summary["details"])
+    else:
+        pass
+
+
+def display_details(details):
+    print("\nDetailed Blocks:")
+    for detail in details:
+        print(f" Block Number: {detail['number']}   Block Type: {detail['tyype']}   Time in Secs: {detail['time_secs']}")
+        print(f" Altitude Start {detail['altitude_start_m']}   End {detail['altitude_end_m']}   µ Lift: {detail['avg_lift_sink_m/s']}   Distance in m: {detail['total_distance_m']}")
+        print("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -")
+    print("return to continue")
     input()
 
 
