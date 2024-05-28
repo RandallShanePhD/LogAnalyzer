@@ -213,6 +213,7 @@ def load_igc(in_igc_file):
 
     pilot: str = ""
     vario: str = ""
+    glider: str = ""
     raw_utc_date = None
     takeoff_dt: None
     landing_dt: None
@@ -250,18 +251,20 @@ def load_igc(in_igc_file):
             offset =11
             if line[:19] == "HFPLTPILOTINCHARGE:":  # flymaster pilot data
                 offset = 19
-
             pilot = line[offset:].replace("\n", "")
 
         if line[:12] == "HFFTYFRTYPE:":
             vario = line[12:].replace("\n", "").replace(",", " ")
+
         if line.startswith("HFGPS:"):
             vario += f", {line[6:]}".replace("\n", "")
 
-        if line[:9] == "HFDTEDATE":  # SeeYou Navigator
-            raw_utc_date = line[10:].replace("\n", "").split(",")[0]
+        if line.startswith("HFGTYGLIDERTYPE:"):
+            glider = line[16:].replace("\n", "")
 
-        elif line[:5] ==  "HFDTE":  # date info
+        if line.startswith("HFDTEDATE:"):  # SeeYou Navigator
+            raw_utc_date = line[10:].replace("\n", "").split(",")[0]
+        elif line.startswith("HFDTE"):  # date info
             raw_utc_date = line[5:].replace("\n", "")
 
         elif line[0] == "B":  # data lines start with 'B'
@@ -394,6 +397,7 @@ def load_igc(in_igc_file):
     summary = {"filename": in_igc_file,
                "pilot": pilot,
                "vario": vario,
+               "glider": glider,
                "flight_date": takeoff_dt,
                "max_alt": high_alt_m,
                "max_lift": high_lift_m,
@@ -559,6 +563,7 @@ def display_summary_stats(summary):
     print("\nSummary Statistics:")
     print(f" File: {summary['filename']}")
     print(f" Pilot: {summary['pilot']}")
+    print(f" Glider: {summary['glider']}")
     print(f" Vario: {summary['vario']}")
     print(f" Date: {formatted_date}")
     print(f" Duration: {formatted_duration}")
@@ -595,9 +600,7 @@ def display_summary_stats(summary):
     print("------------------------------------------\n")
     print("'D' for Detailed flight inspection of blocks over 90 seconds long")
     print("'A' for ALL flight blocks")
-    print("'C' for CLIMBS only")
-    print("'G' for GLIDES only")
-    print("'S' for SINKS only")
+    print("'C', 'G', 'S' for CLIMBS, GLIDES or SINKS only")
     print("[return] to continue")
     inp = input()
     if inp == "D":
