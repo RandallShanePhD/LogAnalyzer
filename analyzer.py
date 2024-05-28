@@ -212,6 +212,7 @@ def load_igc(in_igc_file):
     lines = f.readlines()
 
     pilot: str = ""
+    vario: str = ""
     raw_utc_date = None
     takeoff_dt: None
     landing_dt: None
@@ -235,6 +236,7 @@ def load_igc(in_igc_file):
     landing_heading: int = 0
     total_distance_km = 0.00
     lon_lat_alt_list = []
+    flight_area_km = 0.00
 
     takeoff_flag = True
     analysis_data = []
@@ -250,6 +252,11 @@ def load_igc(in_igc_file):
                 offset = 19
 
             pilot = line[offset:].replace("\n", "")
+
+        if line[:12] == "HFFTYFRTYPE:":
+            vario = line[12:].replace("\n", "").replace(",", " ")
+        if line.startswith("HFGPS:"):
+            vario += f", {line[6:]}".replace("\n", "")
 
         if line[:9] == "HFDTEDATE":  # SeeYou Navigator
             raw_utc_date = line[10:].replace("\n", "").split(",")[0]
@@ -317,6 +324,11 @@ def load_igc(in_igc_file):
                 alt_m = int(line[30:35])  # gps altitude
             landing_alt_m = alt_m
 
+            # flight area calculation
+            fa_dist = haversine((takeoff_lat, takeoff_lon), (lat, lon))
+            if fa_dist > flight_area_km:
+                flight_area_km = fa_dist
+
             # List for kmz path
             lon_lat_alt_list.append((lon, lat, alt_m))
 
@@ -381,6 +393,7 @@ def load_igc(in_igc_file):
 
     summary = {"filename": in_igc_file,
                "pilot": pilot,
+               "vario": vario,
                "flight_date": takeoff_dt,
                "max_alt": high_alt_m,
                "max_lift": high_lift_m,
@@ -393,6 +406,7 @@ def load_igc(in_igc_file):
                "landing_heading": landing_heading,
                "total_distance": round(total_distance_km, 1),
                "takeoff_to_land_dist": round(takeoff_to_land_dist, 1),
+               "flight_area_diameter": round(flight_area_km / 1000, 2),
                "duration": duration,
                # Analysis Data
                "climbs_num": analysis["climbs_num"],
@@ -500,7 +514,7 @@ def flight_analyzer(analysis_data):
             block_detail["time_secs"] = len(block)
             block_detail["altitude_start_m"] = block[0][3]
             block_detail["altitude_end_m"] = block[-1][3]
-            block_detail["avg_lift_sink_m/s"] = blocks_cat[i][1]
+            block_detail["avg_lift_sink_ms"] = blocks_cat[i][1]
             block_detail["loc_start"] = (block[0][1], block[0][2])
             block_detail["loc_end"] = (block[-1][1], block[-1][2])
             block_detail["total_distance_m"] = round(sum(x[5] for x in block) * 100)
@@ -520,9 +534,9 @@ def flight_analyzer(analysis_data):
     if len(sinking_grades) > 0:
         sink_grade = round(stat.mean(sinking_grades), 2)
 
-    avg_sustained_climb = round(stat.mean([x['avg_lift_sink_m/s'] for x in details if x["tyype"] == "Climb"]), 2)
-    max_sustained_climb = max([x['avg_lift_sink_m/s'] for x in details if x["tyype"] == "Climb"])
-    avg_sustained_glide = round(stat.mean([x['avg_lift_sink_m/s'] for x in details if x["tyype"] == "Glide"]), 2)
+    avg_sustained_climb = round(stat.mean([x['avg_lift_sink_ms'] for x in details if x["tyype"] == "Climb"]), 2)
+    max_sustained_climb = max([x['avg_lift_sink_ms'] for x in details if x["tyype"] == "Climb"])
+    avg_sustained_glide = round(stat.mean([x['avg_lift_sink_ms'] for x in details if x["tyype"] == "Glide"]), 2)
 
     analysis_data = {"climbs_num": len(climbing_grades),
                      "glides_num": len(gliding_grades),
@@ -545,6 +559,7 @@ def display_summary_stats(summary):
     print("\nSummary Statistics:")
     print(f" File: {summary['filename']}")
     print(f" Pilot: {summary['pilot']}")
+    print(f" Vario: {summary['vario']}")
     print(f" Date: {formatted_date}")
     print(f" Duration: {formatted_duration}")
     print(f" Takeoff GPS: {summary['takeoff_gps']}")
@@ -554,20 +569,21 @@ def display_summary_stats(summary):
     print(f" Landing Altitude: {summary['landing_alt']} m || {meters_to_feet(summary['landing_alt'])} ft")
     print(f" Landing Heading: {summary['landing_heading']}°")
     print(f" Distance Total: {summary['total_distance']} km || {km_to_miles(summary['total_distance'])} mi")
+    print(f" Flight Area Diameter: {summary['flight_area_diameter']} km || {km_to_miles(summary['flight_area_diameter'])} mi")
     print(f" Takeoff to Landing: {summary['takeoff_to_land_dist']} km || {km_to_miles(summary['takeoff_to_land_dist'])} mi")
     print(f" Max Altitude: {summary['max_alt']} m || {meters_to_feet(summary['max_alt'])} ft")
     print(f" Max Lift: {summary['max_lift']} m/s || {msToFpm(summary['max_lift'])} ft/min")
     print(f" Max Sink: {summary['max_sink']} m/s || {msToFpm(summary['max_sink'])} ft/min")
     print("Analysis:")
     print(f" Climb - Number of Climbs: {summary['climbs_num']}")
-    print(f" Climb - Max Sustained m/s: {summary['max_sustained_climb']}")
-    print(f" Climb - µ Sustained: {summary['µ_sustained_climb']} m/s")
+    print(f" Climb - Max Sustained m/s: {summary['max_sustained_climb']} || {msToFpm(summary['max_sustained_climb'])} fpm")
+    print(f" Climb - µ Sustained: {summary['µ_sustained_climb']} m/s || {msToFpm(summary['µ_sustained_climb'])} fpm")
     print(f" Climb - Efficiency %age: {summary['climb_grade']}%")
     print(f" Glides - Number of Glides: {summary['glides_num']}")
-    print(f" Glides - µ Sustained: {summary['µ_sustained_glide']} m/s")
+    print(f" Glides - µ Sustained: {summary['µ_sustained_glide']} m/s || {msToFpm(summary['µ_sustained_glide'])} fpm")
     print(f" Glides - µ L/D on Glide: {summary['glide_grade']}:1")
     print(f" Sinks - Number of Sinks (descents over {settings['sink_descend_threshold']}): {summary['sinks_num']}")
-    print(f" Sinks - µ Sink Rate: {summary['sink_grade']} m/s")
+    print(f" Sinks - µ Sink Rate: {summary['sink_grade']} m/s || {msToFpm(summary['sink_grade'])} fpm")
     climb_ratio = round(summary['climbs_num'] / (summary['climbs_num'] + summary['glides_num'] + summary['sinks_num']) * 100, 2)
     print(f" You are climbing {climb_ratio}% of the flight")
     glide_ratio = round(
@@ -607,9 +623,11 @@ def display_details(details):
     for detail in details:
         altitude_change = detail['altitude_end_m'] - detail['altitude_start_m']
         print(f" Block Number: {detail['number']}   Block Type: {detail['tyype']}   Time in Secs: {detail['time_secs']}")
-        print(f"  Altitude Start {detail['altitude_start_m']}   End {detail['altitude_end_m']}   Change: {altitude_change}   µ Lift: {detail['avg_lift_sink_m/s']}")
-        print(f"  Location Start {detail['loc_start']}   End {detail['loc_end']}")
-        print(f"  Distance Start-End: {round(haversine(detail['loc_start'], detail['loc_end']) * 1000)}m   Distance Total: {detail['total_distance_m']}m")
+        print(f"  Altitude Start: {detail['altitude_start_m']}m | {meters_to_feet(detail['altitude_start_m'])}ft   End: {detail['altitude_end_m']}m | {meters_to_feet(detail['altitude_end_m'])}ft")
+        print(f"  Change in Altitude: {altitude_change}   µ Lift: {detail['avg_lift_sink_ms']}m/s | {msToFpm(detail['avg_lift_sink_ms'])}ft/min")
+        print(f"  Location Start: {detail['loc_start']}   End: {detail['loc_end']}")
+        distance = round(haversine(detail['loc_start'], detail['loc_end']) * 1000)
+        print(f"  Distance Start-End: {distance}m | {meters_to_feet(distance)}ft   Distance Total: {detail['total_distance_m']}m | {meters_to_feet(detail['total_distance_m'])}ft")
         print("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -")
     print("return to continue")
     input()
