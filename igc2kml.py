@@ -206,7 +206,14 @@ def process_data(data, meta_data, speed_unit):
     distance_delta = [math.sqrt((data.x[i + 1] - data.x[i]) ** 2 + (data.y[i + 1] - data.y[i]) ** 2) for i in
                       range(data.n_samples - 1)] + [0.0]
     speed_conversion_factor = get_speed_conversion_factor(speed_unit)
-    data.speed = [speed_conversion_factor * dx / dt for dx, dt in zip(distance_delta, timedelta)]
+
+    def speed_calc(scf, dx, dt):
+        try:
+            return scf * dx / dt
+        except Exception:
+            return 0.00
+
+    data.speed = [speed_calc(speed_conversion_factor, dx, dt) for dx, dt in zip(distance_delta, timedelta)]
     site_name = get_nearest_launch_site_name(data.lat[0], data.lon[0])
     meta_data['launch_site'] = site_name
     meta_data['speed_unit'] = speed_unit

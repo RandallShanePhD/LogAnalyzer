@@ -77,6 +77,12 @@ def bearing(loc1, loc2):
 
 
 def create_kmz(kmz_data):
+
+    # Native KMZ Creator
+    # from kmz_creator import create_kmz
+    # create_kmz(kmz_data)
+
+    # for IGC2KML Library
     # kmz_data = {"pilot": pilot,
     #             "filename": in_igc_file[:-4]}
     infile = f"Logs/{kmz_data['filename']}"
@@ -361,8 +367,16 @@ def load_igc(in_igc_file):
 
     analysis = flight_analyzer(analysis_data)
 
+    # Native
+    # kmz_data = {"pilot": pilot,
+    #             "filename": in_igc_file[:-4],
+    #             "lon_lat_alt_list": lon_lat_alt_list}
+    # create_kmz(kmz_data)
+
+    # IGC2KML Library
     kmz_data = {"pilot": pilot,
                 "filename": in_igc_file}
+
     try:
         create_kmz(kmz_data)
     except Exception as exc:
@@ -544,7 +558,7 @@ def display_summary_stats(summary):
     if inp == "D":
         large_blocks = [x for x in summary["details"] if x['time_secs'] > 10]
         display_details(large_blocks)
-    elif imp == "A":
+    elif inp == "A":
         display_details(summary["details"])
     else:
         pass
