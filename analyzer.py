@@ -402,9 +402,12 @@ def load_igc(in_igc_file):
                "glides_num": analysis["glides_num"],
                "sinks_num": analysis["sinks_num"],
                "climb_grade": analysis["climb_grade"],
+               "max_sustained_climb": analysis["max_sustained_climb"],
                "glide_grade": analysis["glide_grade"],
                "sink_grade": analysis["sink_grade"],
-               "details": analysis["details"]}
+               "details": analysis["details"],
+               "µ_sustained_climb": analysis["µ_sustained_climb"],
+               "µ_sustained_glide": analysis["µ_sustained_glide"]}
                # "model_data": model_data}
 
     return summary
@@ -506,9 +509,21 @@ def flight_analyzer(analysis_data):
         details.append(block_detail)
 
     # Total Grades
-    climb_grade = round(stat.mean(climbing_grades) * 100, 2)
-    glide_grade = round(stat.mean(gliding_grades), 2)
-    sink_grade = round(stat.mean(sinking_grades), 2)
+    climb_grade = 0.00
+    if len(climbing_grades) > 0:
+        climb_grade = round(stat.mean(climbing_grades) * 100, 2)
+
+    glide_grade = 0.00
+    if len(gliding_grades) > 0:
+        glide_grade = round(stat.mean(gliding_grades), 2)
+
+    sink_grade = 0.00
+    if len(sinking_grades) > 0:
+        sink_grade = round(stat.mean(sinking_grades), 2)
+
+    avg_sustained_climb = round(stat.mean([x['avg_lift_sink_m/s'] for x in details if x["tyype"] == "Climb"]), 2)
+    max_sustained_climb = max([x['avg_lift_sink_m/s'] for x in details if x["tyype"] == "Climb"])
+    avg_sustained_glide = round(stat.mean([x['avg_lift_sink_m/s'] for x in details if x["tyype"] == "Glide"]), 2)
 
     analysis_data = {"climbs_num": len(climbing_grades),
                      "glides_num": len(gliding_grades),
@@ -516,6 +531,9 @@ def flight_analyzer(analysis_data):
                      "climb_grade": climb_grade,
                      "glide_grade": glide_grade,
                      "sink_grade": sink_grade,
+                     "µ_sustained_climb": avg_sustained_climb,
+                     "µ_sustained_glide": avg_sustained_glide,
+                     "max_sustained_climb": max_sustained_climb,
                      "details": details}
 
     return analysis_data
@@ -542,17 +560,29 @@ def display_summary_stats(summary):
     print(f" Max Lift: {summary['max_lift']} m/s || {msToFpm(summary['max_lift'])} ft/min")
     print(f" Max Sink: {summary['max_sink']} m/s || {msToFpm(summary['max_sink'])} ft/min")
     print("Analysis:")
-    print(f" Number of Climbs: {summary['climbs_num']}")
-    print(f" Climb Efficiency: {summary['climb_grade']}%")
-    print(f" Number of Glides: {summary['glides_num']}")
-    print(f" µ L/D on Glide: {summary['glide_grade']}:1")
-    print(f" Number of Sinks: {summary['sinks_num']}")
-    print(f" µ Sink Rate: {summary['sink_grade']} m/s")
-    ratio = round(summary['climbs_num'] / (summary['climbs_num'] + summary['glides_num'] + summary['sinks_num']) * 100, 2)
-    print(f" You are climbing {ratio}% of the flight")
+    print(f" Climb - Number of Climbs: {summary['climbs_num']}")
+    print(f" Climb - Max Sustained m/s: {summary['max_sustained_climb']}")
+    print(f" Climb - µ Sustained: {summary['µ_sustained_climb']} m/s")
+    print(f" Climb - Efficiency %age: {summary['climb_grade']}%")
+    print(f" Glides - Number of Glides: {summary['glides_num']}")
+    print(f" Glides - µ Sustained: {summary['µ_sustained_glide']} m/s")
+    print(f" Glides - µ L/D on Glide: {summary['glide_grade']}:1")
+    print(f" Sinks - Number of Sinks (descents over {settings['sink_descend_threshold']}): {summary['sinks_num']}")
+    print(f" Sinks - µ Sink Rate: {summary['sink_grade']} m/s")
+    climb_ratio = round(summary['climbs_num'] / (summary['climbs_num'] + summary['glides_num'] + summary['sinks_num']) * 100, 2)
+    print(f" You are climbing {climb_ratio}% of the flight")
+    glide_ratio = round(
+        summary['glides_num'] / (summary['climbs_num'] + summary['glides_num'] + summary['sinks_num']) * 100, 2)
+    print(f" You are gliding {glide_ratio}% of the flight")
+    sink_ratio = round(
+        summary['sinks_num'] / (summary['climbs_num'] + summary['glides_num'] + summary['sinks_num']) * 100, 2)
+    print(f" You are sinking {sink_ratio}% of the flight")
     print("------------------------------------------\n")
-    print("'D' for detailed flight inspection")
-    print("'A' for ALL block flight inspection")
+    print("'D' for Detailed flight inspection of blocks over 10 seconds")
+    print("'A' for ALL flight blocks")
+    print("'C' for CLIMBS only")
+    print("'G' for GLIDES only")
+    print("'S' for SINKS only")
     print("[return] to continue")
     inp = input()
     if inp == "D":
@@ -560,6 +590,15 @@ def display_summary_stats(summary):
         display_details(large_blocks)
     elif inp == "A":
         display_details(summary["details"])
+    elif inp == "C":
+        climb_blocks = [x for x in summary["details"] if x['tyype'] == 'Climb']
+        display_details(climb_blocks)
+    elif inp == "G":
+        glide_blocks = [x for x in summary["details"] if x['tyype'] == 'Glide']
+        display_details(glide_blocks)
+    elif inp == "S":
+        sink_blocks = [x for x in summary["details"] if x['tyype'] == 'Sink']
+        display_details(sink_blocks)
     else:
         pass
 
