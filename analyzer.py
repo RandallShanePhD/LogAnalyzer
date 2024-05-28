@@ -248,7 +248,10 @@ def load_igc(in_igc_file):
 
             pilot = line[offset:].replace("\n", "")
 
-        if line[:5] ==  "HFDTE":  # date info
+        if line[:9] == "HFDTEDATE":  # SeeYou Navigator
+            raw_utc_date = line[10:].replace("\n", "").split(",")[0]
+
+        elif line[:5] ==  "HFDTE":  # date info
             raw_utc_date = line[5:].replace("\n", "")
 
         elif line[0] == "B":  # data lines start with 'B'
@@ -360,7 +363,10 @@ def load_igc(in_igc_file):
 
     kmz_data = {"pilot": pilot,
                 "filename": in_igc_file}
-    create_kmz(kmz_data)
+    try:
+        create_kmz(kmz_data)
+    except Exception as exc:
+        print("ERROR: KMZ file not created!")
 
     summary = {"filename": in_igc_file,
                "pilot": pilot,
@@ -460,8 +466,8 @@ def flight_analyzer(analysis_data):
             lift = block[-1][3] - block[0][3]
             if lift == 0:
                 lift = 1
-            distance = round(sum(x[5] for x in block) * 1000)
-            l_over_d = abs(round(distance / lift))
+            distance = round(sum(x[5] for x in block) * 100)
+            l_over_d = round(distance / lift, 2)
             gliding_grades.append(l_over_d)
         elif tyype == "S":  # record abs of sink rate
             sink_rate = abs(blocks_cat[i][1])
@@ -532,9 +538,13 @@ def display_summary_stats(summary):
     print(f" You are climbing {ratio}% of the flight")
     print("------------------------------------------\n")
     print("'D' for detailed flight inspection")
+    print("'A' for ALL block flight inspection")
     print("[return] to continue")
     inp = input()
     if inp == "D":
+        large_blocks = [x for x in summary["details"] if x['time_secs'] > 10]
+        display_details(large_blocks)
+    elif imp == "A":
         display_details(summary["details"])
     else:
         pass

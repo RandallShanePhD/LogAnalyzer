@@ -74,6 +74,9 @@ def parse_igc(fname):
                 continue
             if line[0] == 'B':
                 data.append(_parse_B_record(line, date))
+            if line.startswith('HFDTEDATE'):  # SeeYou Navigator
+                utc_date = line[10:16].replace("\n", "").split(",")[0]
+                date = datetime.datetime.strptime(utc_date, "%d%m%y")
             elif line.startswith('HFDTE'):
                 date = datetime.datetime.strptime(line[5:11], "%d%m%y")
                 meta_data['date'] = date
