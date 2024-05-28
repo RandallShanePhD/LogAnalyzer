@@ -578,7 +578,7 @@ def display_summary_stats(summary):
         summary['sinks_num'] / (summary['climbs_num'] + summary['glides_num'] + summary['sinks_num']) * 100, 2)
     print(f" You are sinking {sink_ratio}% of the flight")
     print("------------------------------------------\n")
-    print("'D' for Detailed flight inspection of blocks over 10 seconds")
+    print("'D' for Detailed flight inspection of blocks over 30 seconds long")
     print("'A' for ALL flight blocks")
     print("'C' for CLIMBS only")
     print("'G' for GLIDES only")
@@ -586,7 +586,7 @@ def display_summary_stats(summary):
     print("[return] to continue")
     inp = input()
     if inp == "D":
-        large_blocks = [x for x in summary["details"] if x['time_secs'] > 10]
+        large_blocks = [x for x in summary["details"] if x['time_secs'] > 30]
         display_details(large_blocks)
     elif inp == "A":
         display_details(summary["details"])
