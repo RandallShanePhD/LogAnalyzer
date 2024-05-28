@@ -10,10 +10,7 @@ from math import asin, atan2, degrees, cos, radians, sin, sqrt
 # Constants -------------------------------------/
 settings = {
     "averaging_factor": 10,
-    # "climb_time_threshold": 10,
     "climb_ascend_threshold": 0.5,
-    # "glide_time_threshold": 15,
-    # "sink_time_threshold": 7,
     "sink_descend_threshold": 2.5,
     "kmz_speed_units": "kmh"
     }
@@ -469,44 +466,46 @@ def flight_analyzer(analysis_data):
     gliding_grades = []
     sinking_grades = []
     for i, block in enumerate(blocks):
-        tyype = blocks_cat[i][0]
-        altis = [x[3] for x in block]
-        if tyype == "C":  # climbs analysis - graded on percent of time altitude increases continuously in climbing block
-            total_climb = altis[-1] - altis[0]
-            climbing = 0
-            for i, alti in enumerate(altis):
-                if i > 0:
-                    if alti > altis[i - 1]:
-                        climbing += 1
-            climbing_grades.append(round(float(climbing / len(altis)), 2))
-        elif tyype == "G":  # glides analysis - Calc L/D & aggregate (somehow)
-            lift = block[-1][3] - block[0][3]
-            if lift == 0:
-                lift = 1
-            distance = round(sum(x[5] for x in block) * 100)
-            l_over_d = round(distance / lift, 2)
-            gliding_grades.append(l_over_d)
-        elif tyype == "S":  # record abs of sink rate
-            sink_rate = abs(blocks_cat[i][1])
-            sinking_grades.append(sink_rate)
+        if block != []:
+            tyype = blocks_cat[i][0]
+            altis = [x[3] for x in block]
+            if tyype == "C":  # climbs analysis - graded on percent of time altitude increases continuously in climbing block
+                total_climb = altis[-1] - altis[0]
+                climbing = 0
+                for i, alti in enumerate(altis):
+                    if i > 0:
+                        if alti > altis[i - 1]:
+                            climbing += 1
+                climbing_grades.append(round(float(climbing / len(altis)), 2))
+            elif tyype == "G":  # glides analysis - Calc L/D & aggregate (somehow)
+                lift = block[-1][3] - block[0][3]
+                if lift == 0:
+                    lift = 1
+                distance = round(sum(x[5] for x in block) * 100)
+                l_over_d = round(distance / lift, 2)
+                gliding_grades.append(l_over_d)
+            elif tyype == "S":  # record abs of sink rate
+                sink_rate = abs(blocks_cat[i][1])
+                sinking_grades.append(sink_rate)
 
     # Step 5: Detail Data
     details = []
     tyype_lookup = {"G": "Glide", "C": "Climb", "S": "Sink"}
     for i, block in enumerate(blocks):
-        altis = [x[3] for x in block]
-        block_detail = {}
-        block_detail["number"] = i
-        block_detail["tyype"] = tyype_lookup[blocks_cat[i][0]]
-        block_detail["time_secs"] = len(block)
-        block_detail["altitude_start_m"] = block[0][3]
-        block_detail["altitude_end_m"] = block[-1][3]
-        block_detail["avg_lift_sink_m/s"] = blocks_cat[i][1]
-        block_detail["loc_start"] = (block[0][1], block[0][2])
-        block_detail["loc_end"] = (block[-1][1], block[-1][2])
-        block_detail["total_distance_m"] = round(sum(x[5] for x in block) * 100)
+        if block != []:
+            altis = [x[3] for x in block]
+            block_detail = {}
+            block_detail["number"] = i
+            block_detail["tyype"] = tyype_lookup[blocks_cat[i][0]]
+            block_detail["time_secs"] = len(block)
+            block_detail["altitude_start_m"] = block[0][3]
+            block_detail["altitude_end_m"] = block[-1][3]
+            block_detail["avg_lift_sink_m/s"] = blocks_cat[i][1]
+            block_detail["loc_start"] = (block[0][1], block[0][2])
+            block_detail["loc_end"] = (block[-1][1], block[-1][2])
+            block_detail["total_distance_m"] = round(sum(x[5] for x in block) * 100)
 
-        details.append(block_detail)
+            details.append(block_detail)
 
     # Total Grades
     climb_grade = 0.00
@@ -578,7 +577,7 @@ def display_summary_stats(summary):
         summary['sinks_num'] / (summary['climbs_num'] + summary['glides_num'] + summary['sinks_num']) * 100, 2)
     print(f" You are sinking {sink_ratio}% of the flight")
     print("------------------------------------------\n")
-    print("'D' for Detailed flight inspection of blocks over 30 seconds long")
+    print("'D' for Detailed flight inspection of blocks over 90 seconds long")
     print("'A' for ALL flight blocks")
     print("'C' for CLIMBS only")
     print("'G' for GLIDES only")
@@ -586,7 +585,7 @@ def display_summary_stats(summary):
     print("[return] to continue")
     inp = input()
     if inp == "D":
-        large_blocks = [x for x in summary["details"] if x['time_secs'] > 30]
+        large_blocks = [x for x in summary["details"] if x['time_secs'] > 90]
         display_details(large_blocks)
     elif inp == "A":
         display_details(summary["details"])
