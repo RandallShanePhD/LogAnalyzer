@@ -1,5 +1,10 @@
 # LogAnalyzer
 
+## TO DO:
+- Detect type of flight (Thermal vs Ridge)
+- Low save detector
+
+
 ## Analysis Methodology
 ### Default Settings
 - climb_time_threshold: 10 seconds

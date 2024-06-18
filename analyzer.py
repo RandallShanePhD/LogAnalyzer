@@ -627,7 +627,7 @@ def display_details(details):
         altitude_change = detail['altitude_end_m'] - detail['altitude_start_m']
         print(f" Block Number: {detail['number']}   Block Type: {detail['tyype']}   Time in Secs: {detail['time_secs']}")
         print(f"  Altitude Start: {detail['altitude_start_m']}m | {meters_to_feet(detail['altitude_start_m'])}ft   End: {detail['altitude_end_m']}m | {meters_to_feet(detail['altitude_end_m'])}ft")
-        print(f"  Change in Altitude: {altitude_change}   µ Lift: {detail['avg_lift_sink_ms']}m/s | {msToFpm(detail['avg_lift_sink_ms'])}ft/min")
+        print(f"  Change in Altitude: {altitude_change}m | {meters_to_feet(altitude_change)}ft   µ Lift: {detail['avg_lift_sink_ms']}m/s | {msToFpm(detail['avg_lift_sink_ms'])}ft/min")
         print(f"  Location Start: {detail['loc_start']}   End: {detail['loc_end']}")
         distance = round(haversine(detail['loc_start'], detail['loc_end']) * 1000)
         print(f"  Distance Start-End: {distance}m | {meters_to_feet(distance)}ft   Distance Total: {detail['total_distance_m']}m | {meters_to_feet(detail['total_distance_m'])}ft")
