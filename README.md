@@ -3,6 +3,7 @@
 ## TO DO:
 - Detect type of flight (Thermal vs Ridge)
 - Low save detector
+- Add Speed to Fly / MacReady Calc
 
 
 ## Analysis Methodology
