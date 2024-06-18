@@ -4,6 +4,7 @@
 - Detect type of flight (Thermal vs Ridge)
 - Low save detector
 - Add Speed to Fly / MacReady Calc
+- Fix KMZ crator (adjust to ground)
 
 
 ## Analysis Methodology
