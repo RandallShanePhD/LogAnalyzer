@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import datetime
 import datetime as dt
 import numpy as np
 import os
@@ -8,12 +9,10 @@ import sys
 from math import asin, atan2, degrees, cos, radians, sin, sqrt
 
 # Constants -------------------------------------/
-settings = {
-    "averaging_factor": 10,
-    "climb_ascend_threshold": 0.5,
-    "sink_descend_threshold": 2.5,
-    "kmz_speed_units": "kmh"
-    }
+settings = {"averaging_factor": 10,
+            "climb_ascend_threshold": 0.5,
+            "sink_descend_threshold": 2.5,
+            "kmz_speed_units": "kmh"}
 
 
 # Reference Functions ---------------------------/
@@ -52,12 +51,17 @@ def msToFpm(ms: float):
     return round(ms * 196.8504)
 
 
+def format_timestamp(ts: datetime):
+    formated = f"{ts.date().year}-{ts.date().month}-{ts.date().day} {ts.time().hour}:{ts.time().minute}:{ts.time().second}"
+    return formated
+
+
 def haversine(loc1, loc2):
     # loc is a (lat, lon) tuple
     lat1, lon1, lat2, lon2 = map(radians, [loc1[0], loc1[1], loc2[0], loc2[1]])
     dlon = (lon2 - lon1)
     dlat = (lat2 - lat1)
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
     c = 2 * asin(sqrt(a))  # formula 1
     # c = 2 * atan2(sqrt(a), sqrt(1 - a))  # formula 2
     r = 6372.8  # for km. Use 3959.87433 for miles
@@ -74,23 +78,19 @@ def bearing(loc1, loc2):
 
 
 def create_kmz(kmz_data):
-
     # Native KMZ Creator
     # from kmz_creator import create_kmz
     # create_kmz(kmz_data)
 
     # for IGC2KML Library
-    # kmz_data = {"pilot": pilot,
-    #             "filename": in_igc_file[:-4]}
-    infile = f"Logs/{kmz_data['filename']}"
-    outfile = f"KMZs/{kmz_data['filename'][:-4]}.kmz"
+    infile = f"Logs/{kmz_data['filename']}.igc"
+    outfile = f"KMZs/{kmz_data['filename']}.kmz"
     if os.path.exists(outfile):
         os.remove(outfile)
 
-    from igc2kml import parse_igc, process_data, write_kml
-    data, meta_data = parse_igc(infile)
+    from igc2kml import parse_igc_header, process_data, write_kml
+    data, meta_data = parse_igc_header(infile)
     data, meta_data = process_data(data, meta_data, speed_unit=settings['kmz_speed_units'])
-    meta_data["pilot"] = kmz_data["pilot"]
     write_kml(outfile, data, meta_data)
 
 
@@ -98,7 +98,7 @@ def create_kmz(kmz_data):
 def instructions():
     print("\n")
     print("-----------------------------------------------------")
-    print("--   IGC Log File Analyzer  (v2024-05)             --")
+    print("--   IGC Log File Analyzer  (v2026-01)             --")
     print("--   Wander Expeditions LLC                        --")
     print("--   Randall Shane PhD                             --")
     print("--   Randall@WanderExpeditions.com                 --")
@@ -136,7 +136,7 @@ def instructions():
 
 
 def display_settings():
-    selection = "x"
+    # selection = "x"
     print("\n Settings & Analysis Notes:")
     print("--------------------------------------------------------------------------------")
     print("  NOTE: Analysis of the flight log looks for climbs, glides and sinks. The")
@@ -147,12 +147,6 @@ def display_settings():
     print("--------------------------------------------------------------------------------")
     print(f"  A: Lift/Sink Averaging Factor == {settings['averaging_factor']}")
     print("     - Number of seconds used to average lift & sink.")
-    print(f"  C: Climb Time Threshold == {settings['climb_time_threshold']}")
-    print("     - Number of seconds of continuing climb to be labeled a climb.")
-    print(f"  G: Glide Time Threshold == {settings['glide_time_threshold']}")
-    print("     - Number of seconds of continuing glide to be labeled a glide.")
-    print(f"  S: Sink Time Threshold == {settings['sink_time_threshold']}")
-    print("     - Number of seconds of continuing sink to be labeled sinking.")
     print(f"  D: Sink Descend Threshold == {settings['sink_descend_threshold']}")
     print("     - Meters/second threshold to be considered sinking.")
     print(f"  E: KMZ File Speed Units == {settings['kmz_speed_units']}")
@@ -167,22 +161,10 @@ def display_settings():
             param = input("Input new number of Averaging seconds: ")
             if param.isnumeric():
                 settings['averaging_factor'] = int(param)
-        elif selection == "C":
-            param = input("Input new number of Climbing seconds: ")
-            if param.isnumeric():
-                settings['climb_time_threshold'] = int(param)
         elif selection == "M":
             param = input("Input new m/s Climbing thresholh as a decimal (ex: 2.5): ")
             if param.isnumeric():
                 settings['climb_ascend_threshold'] = float(param)
-        elif selection == "G":
-            param = input("Input new number of Gliding seconds: ")
-            if param.isnumeric():
-                settings['glide_time_threshold'] = int(param)
-        elif selection == "S":
-            param = input("Input new number of Sinking seconds: ")
-            if param.isnumeric():
-                settings['sink_time_threshold'] = int(param)
         elif selection == "D":
             param = input("Input new Sink Descent threshold as a decimal (ex: 3.1): ")
             if param.replace(".", "").isnumeric():
@@ -244,11 +226,11 @@ def load_igc(in_igc_file):
     climb_readings = 0
     glide_readings = 0
 
-    model_data = []
+    model_data = {}
 
     for i, line in enumerate(lines):
-        if line[:5] ==  "HFPLT":  # xc tracer pilot data
-            offset =11
+        if line[:5] == "HFPLT":  # xc tracer pilot data
+            offset = 11
             if line[:19] == "HFPLTPILOTINCHARGE:":  # flymaster pilot data
                 offset = 19
             pilot = line[offset:].replace("\n", "")
@@ -280,10 +262,11 @@ def load_igc(in_igc_file):
             if ew == "W":
                 lon = lon * -1
 
-            # GPS & Decimal places
+            # REFERENCE: GPS & Decimal places
             # 100s = non zero = longitude
             # 10s = 1000km
-            # 1s = 111km
+            # 1s = 111km/90km (lat 69 miles, lon 56.51 miles)
+            # 1s diagonal = 144km or 89 miles
             # 1 decimal = 11.1km
             # 2 decimals = 1.1km
             # 3 decimals = 110m
@@ -291,7 +274,6 @@ def load_igc(in_igc_file):
             # 5 decimals = 1.1m
             # 6 decimals = 11cm
             # 7 decimals = 1.1cm (surveying, limit of GPS tech)
-
 
             # total distance
             travelled = haversine((last_lat, last_lon), (lat, lon))
@@ -305,7 +287,7 @@ def load_igc(in_igc_file):
 
             # get bearing
             if last_lat != 0.00 and last_lon != 0.00 and \
-                (last_lat, last_lon) != (lat, lon):
+                    (last_lat, last_lon) != (lat, lon):
                 heading = bearing((last_lat, last_lon), (lat, lon))
                 # print(f"GPS: {(last_lat, last_lon), (lat, lon)}\tHeading {heading}")
 
@@ -343,7 +325,7 @@ def load_igc(in_igc_file):
                         high_lift_m = climb_sink
                     elif climb_sink < high_sink_m:
                         high_sink_m = climb_sink
-                    alt_readings =[]
+                    alt_readings = []
             else:
                 alt_readings.append(float(alt_m))
 
@@ -362,12 +344,6 @@ def load_igc(in_igc_file):
                 high_alt_m = alt_m
             last_alt = alt_m
 
-            # model data preparation
-            # date, time, latitude, longitude, altitude (m), heading
-            # model_line = [int(raw_utc_date), int(raw_time), lat, lon, alt_m, heading]  # try 1
-            # model_line = [int(f"{raw_utc_date}{raw_time}"), alt_m, climb_sink]  # try 2
-            # model_data.append(model_line)
-
     takeoff_to_land_dist = haversine((takeoff_lat, takeoff_lon), (last_lat, last_lon))
 
     # Landing Determination
@@ -379,20 +355,16 @@ def load_igc(in_igc_file):
 
     analysis = flight_analyzer(analysis_data)
 
-    # Native
-    # kmz_data = {"pilot": pilot,
-    #             "filename": in_igc_file[:-4],
-    #             "lon_lat_alt_list": lon_lat_alt_list}
-    # create_kmz(kmz_data)
-
-    # IGC2KML Library
-    kmz_data = {"pilot": pilot,
-                "filename": in_igc_file}
-
-    try:
-        create_kmz(kmz_data)
-    except Exception as exc:
-        print("ERROR: KMZ file not created!")
+    # Weather Model Data
+    model_data["takeoff_datetime"] = takeoff_dt
+    model_data["landing_datetime"] = landing_dt
+    model_data["duration"] = duration
+    model_data["takeoff_gps"] = (takeoff_lat, takeoff_lon)
+    model_data["landing_gps"] = (last_lat, last_lon)
+    model_data["max_altitude"] = high_alt_m
+    model_data["distance_total"] = total_distance_km
+    model_data["takeoff_to_landing"] = takeoff_to_land_dist
+    model_data["flight_area"] = flight_area_km
 
     summary = {"filename": in_igc_file,
                "pilot": pilot,
@@ -401,10 +373,12 @@ def load_igc(in_igc_file):
                "flight_date": takeoff_dt,
                "max_alt": high_alt_m,
                "max_lift": high_lift_m,
-               "max_sink" : high_sink_m,
+               "max_sink": high_sink_m,
+               "takeoff_datetime": format_timestamp(takeoff_dt),
                "takeoff_alt": takeoff_alt_m,
                "takeoff_gps": (round(takeoff_lat, 6), round(takeoff_lon, 6)),
                "takeoff_heading": takeoff_heading,
+               "landing_datetime": format_timestamp(landing_dt),
                "landing_alt": landing_alt_m,
                "landing_gps": (round(last_lat, 6), round(last_lon, 6)),
                "landing_heading": landing_heading,
@@ -422,8 +396,8 @@ def load_igc(in_igc_file):
                "sink_grade": analysis["sink_grade"],
                "details": analysis["details"],
                "µ_sustained_climb": analysis["µ_sustained_climb"],
-               "µ_sustained_glide": analysis["µ_sustained_glide"]}
-               # "model_data": model_data}
+               "µ_sustained_glide": analysis["µ_sustained_glide"],
+               "model_data": model_data}
 
     return summary
 
@@ -556,67 +530,78 @@ def flight_analyzer(analysis_data):
     return analysis_data
 
 
-def display_summary_stats(summary):
-    formatted_date = dt.datetime.strftime(summary['flight_date'], "%d %b %Y")
-    formatted_duration = str(dt.timedelta(seconds=summary["duration"]))
+def display_summary_stats(s):
+    formatted_date = dt.datetime.strftime(s['flight_date'], "%d %b %Y")
+    formatted_duration = str(dt.timedelta(seconds=s["duration"]))
 
-    print("\nSummary Statistics:")
-    print(f" File: {summary['filename']}")
-    print(f" Pilot: {summary['pilot']}")
-    print(f" Glider: {summary['glider']}")
-    print(f" Vario: {summary['vario']}")
-    print(f" Date: {formatted_date}")
-    print(f" Duration: {formatted_duration}")
-    print(f" Takeoff GPS: {summary['takeoff_gps']}")
-    print(f" Takeoff Altitude: {summary['takeoff_alt']} m || {meters_to_feet(summary['takeoff_alt'])} ft")
-    print(f" Takeoff Heading: {summary['takeoff_heading']}°")
-    print(f" Landing GPS: {summary['landing_gps']}")
-    print(f" Landing Altitude: {summary['landing_alt']} m || {meters_to_feet(summary['landing_alt'])} ft")
-    print(f" Landing Heading: {summary['landing_heading']}°")
-    print(f" Distance Total: {summary['total_distance']} km || {km_to_miles(summary['total_distance'])} mi")
-    print(f" Flight Area Diameter: {summary['flight_area_diameter']} km || {km_to_miles(summary['flight_area_diameter'])} mi")
-    print(f" Takeoff to Landing: {summary['takeoff_to_land_dist']} km || {km_to_miles(summary['takeoff_to_land_dist'])} mi")
-    print(f" Max Altitude: {summary['max_alt']} m || {meters_to_feet(summary['max_alt'])} ft")
-    print(f" Max Lift: {summary['max_lift']} m/s || {msToFpm(summary['max_lift'])} ft/min")
-    print(f" Max Sink: {summary['max_sink']} m/s || {msToFpm(summary['max_sink'])} ft/min")
+    print("\nFlight:")
+    print(f"  File: {s['filename']}")
+    print(f"  Pilot: {s['pilot']}")
+    print(f"  Glider: {s['glider']}")
+    print(f"  Vario: {s['vario']}")
+    print("Statistics:")
+    print(f"  Date: {formatted_date}")
+    print(f"  Duration: {formatted_duration}")
+    print(f"  Takeoff GPS: {s['takeoff_gps']}")
+    print(f"  Takeoff DateTime: {s['takeoff_datetime']}")
+    print(f"  Takeoff Altitude: {s['takeoff_alt']} m || {meters_to_feet(s['takeoff_alt'])} ft")
+    print(f"  Takeoff Heading: {s['takeoff_heading']}°")
+    print(f"  Landing GPS: {s['landing_gps']}")
+    print(f"  Landing DateTime: {s['landing_datetime']}")
+    print(f"  Landing Altitude: {s['landing_alt']} m || {meters_to_feet(s['landing_alt'])} ft")
+    print(f"  Landing Heading: {s['landing_heading']}°")
+    print(f"  Distance Total: {s['total_distance']} km || {km_to_miles(s['total_distance'])} mi")
+    print(f"  Flight Area Diameter: {s['flight_area_diameter']} km || {km_to_miles(s['flight_area_diameter'])} mi")
+    print(f"  Takeoff to Landing: {s['takeoff_to_land_dist']} km || {km_to_miles(s['takeoff_to_land_dist'])} mi")
+    print(f"  Max Altitude: {s['max_alt']} m || {meters_to_feet(s['max_alt'])} ft")
+    print(f"  Max Lift: {s['max_lift']} m/s || {msToFpm(s['max_lift'])} ft/min")
+    print(f"  Max Sink: {s['max_sink']} m/s || {msToFpm(s['max_sink'])} ft/min")
     print("Analysis:")
-    print(f" Climb - Number of Climbs: {summary['climbs_num']}")
-    print(f" Climb - Max Sustained m/s: {summary['max_sustained_climb']} || {msToFpm(summary['max_sustained_climb'])} fpm")
-    print(f" Climb - µ Sustained: {summary['µ_sustained_climb']} m/s || {msToFpm(summary['µ_sustained_climb'])} fpm")
-    print(f" Climb - Efficiency %age: {summary['climb_grade']}%")
-    print(f" Glides - Number of Glides: {summary['glides_num']}")
-    print(f" Glides - µ Sustained: {summary['µ_sustained_glide']} m/s || {msToFpm(summary['µ_sustained_glide'])} fpm")
-    print(f" Glides - µ L/D on Glide: {summary['glide_grade']}:1")
-    print(f" Sinks - Number of Sinks (descents over {settings['sink_descend_threshold']}): {summary['sinks_num']}")
-    print(f" Sinks - µ Sink Rate: {summary['sink_grade']} m/s || {msToFpm(summary['sink_grade'])} fpm")
-    climb_ratio = round(summary['climbs_num'] / (summary['climbs_num'] + summary['glides_num'] + summary['sinks_num']) * 100, 2)
-    print(f" You are climbing {climb_ratio}% of the flight")
+    print(f"  Climb - Number of Climbs: {s['climbs_num']}")
+    print(f"  Climb - Max Sustained m/s: {s['max_sustained_climb']} || {msToFpm(s['max_sustained_climb'])} fpm")
+    print(f"  Climb - µ Sustained: {s['µ_sustained_climb']} m/s || {msToFpm(s['µ_sustained_climb'])} fpm")
+    print(f"  Glides - Number of Glides: {s['glides_num']}")
+    print(f"  Glides - µ Sustained: {s['µ_sustained_glide']} m/s || {msToFpm(s['µ_sustained_glide'])} fpm")
+    print(f"  Glides - µ L/D on Glide: {s['glide_grade']}:1")
+    print(f"  Sinks - Number of Sinks (descents over {settings['sink_descend_threshold']}): {s['sinks_num']}")
+    print(f"  Sinks - µ Sink Rate: {s['sink_grade']} m/s || {msToFpm(s['sink_grade'])} fpm")
+    climb_ratio = round(
+        s['climbs_num'] / (s['climbs_num'] + s['glides_num'] + s['sinks_num']) * 100, 2)
+    print(f"  You are climbing {climb_ratio}% of the flight")
     glide_ratio = round(
-        summary['glides_num'] / (summary['climbs_num'] + summary['glides_num'] + summary['sinks_num']) * 100, 2)
-    print(f" You are gliding {glide_ratio}% of the flight")
+        s['glides_num'] / (s['climbs_num'] + s['glides_num'] + s['sinks_num']) * 100, 2)
+    print(f"  You are gliding {glide_ratio}% of the flight")
     sink_ratio = round(
-        summary['sinks_num'] / (summary['climbs_num'] + summary['glides_num'] + summary['sinks_num']) * 100, 2)
-    print(f" You are sinking {sink_ratio}% of the flight")
+        s['sinks_num'] / (s['climbs_num'] + s['glides_num'] + s['sinks_num']) * 100, 2)
+    print(f"  You are sinking {sink_ratio}% of the flight")
+    print(f"Efficiency Grade: {s['climb_grade']}%")
+    print("  Each single climb is graded on percent of time altitude increases continuously while in the")
+    print("  climbing block. The overall grade is the mean of all climbs grades together as a percentage.")
     print("------------------------------------------\n")
     print("'D' for Detailed flight inspection of blocks over 90 seconds long")
     print("'A' for ALL flight blocks")
     print("'C', 'G', 'S' for CLIMBS, GLIDES or SINKS only")
+    print("'K' for KML export of flight path")
     print("[return] to continue")
     inp = input()
     if inp == "D":
-        large_blocks = [x for x in summary["details"] if x['time_secs'] > 90]
+        large_blocks = [x for x in s["details"] if x['time_secs'] > 90]
         display_details(large_blocks)
     elif inp == "A":
-        display_details(summary["details"])
+        display_details(s["details"])
     elif inp == "C":
-        climb_blocks = [x for x in summary["details"] if x['tyype'] == 'Climb']
+        climb_blocks = [x for x in s["details"] if x['tyype'] == 'Climb']
         display_details(climb_blocks)
     elif inp == "G":
-        glide_blocks = [x for x in summary["details"] if x['tyype'] == 'Glide']
+        glide_blocks = [x for x in s["details"] if x['tyype'] == 'Glide']
         display_details(glide_blocks)
     elif inp == "S":
-        sink_blocks = [x for x in summary["details"] if x['tyype'] == 'Sink']
+        sink_blocks = [x for x in s["details"] if x['tyype'] == 'Sink']
         display_details(sink_blocks)
+    elif inp == "K":
+        kmz_data = {"pilot": s['pilot'],
+                    "filename": s['filename'][:-4]}
+        create_kmz(kmz_data)
     else:
         pass
 
@@ -625,12 +610,16 @@ def display_details(details):
     print("\nDetailed Blocks:")
     for detail in details:
         altitude_change = detail['altitude_end_m'] - detail['altitude_start_m']
-        print(f" Block Number: {detail['number']}   Block Type: {detail['tyype']}   Time in Secs: {detail['time_secs']}")
-        print(f"  Altitude Start: {detail['altitude_start_m']}m | {meters_to_feet(detail['altitude_start_m'])}ft   End: {detail['altitude_end_m']}m | {meters_to_feet(detail['altitude_end_m'])}ft")
-        print(f"  Change in Altitude: {altitude_change}m | {meters_to_feet(altitude_change)}ft   µ Lift: {detail['avg_lift_sink_ms']}m/s | {msToFpm(detail['avg_lift_sink_ms'])}ft/min")
+        print(
+            f" Block Number: {detail['number']}   Block Type: {detail['tyype']}   Time in Secs: {detail['time_secs']}")
+        print(
+            f"  Altitude Start: {detail['altitude_start_m']}m | {meters_to_feet(detail['altitude_start_m'])}ft   End: {detail['altitude_end_m']}m | {meters_to_feet(detail['altitude_end_m'])}ft")
+        print(
+            f"  Change in Altitude: {altitude_change}m | {meters_to_feet(altitude_change)}ft   µ Lift: {detail['avg_lift_sink_ms']}m/s | {msToFpm(detail['avg_lift_sink_ms'])}ft/min")
         print(f"  Location Start: {detail['loc_start']}   End: {detail['loc_end']}")
         distance = round(haversine(detail['loc_start'], detail['loc_end']) * 1000)
-        print(f"  Distance Start-End: {distance}m | {meters_to_feet(distance)}ft   Distance Total: {detail['total_distance_m']}m | {meters_to_feet(detail['total_distance_m'])}ft")
+        print(
+            f"  Distance Start-End: {distance}m | {meters_to_feet(distance)}ft   Distance Total: {detail['total_distance_m']}m | {meters_to_feet(detail['total_distance_m'])}ft")
         print("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -")
     print("return to continue")
     input()

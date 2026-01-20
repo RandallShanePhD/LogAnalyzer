@@ -65,7 +65,7 @@ def _parse_B_record(line, date):
     alt_gps = float(line[30:35])
     return t, lat, lon, is_3D_fix, alt_baro, alt_gps
 
-def parse_igc(fname):
+def parse_igc_header(fname):
     meta_data = dict()
     data = []
     with open(fname) as f:
@@ -231,24 +231,24 @@ def get_speed_conversion_factor(unit):
     else:
         raise ValueError(f"Unknown unit for speed: {unit}")
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="IGC to KML converter for flight logs, so they can be viewed with Google Earth.")
-    parser.add_argument("input", nargs="+", help="Input file name(s)")
-    parser.add_argument("--output", help="Output file name", default=None)
-    parser.add_argument("--force", "-f", help="Overwrite output file if it exists", action="store_true")
-    parser.add_argument("--pilot", "-p", help="Pilot's name (will appear on flight path name)", type=str)
-    parser.add_argument("--units", "-u", help="Ground speed units, kts or kmh (default kmh)", type=str, choices=["m/s", "kmh", "mph", "kts"], default="kmh")
-    args = parser.parse_args()
-
-    for input_fname in args.input:
-        data, meta_data = parse_igc(input_fname)
-        data, meta_data = process_data(data, meta_data, speed_unit=args.units)
-        meta_data["pilot"] = args.pilot
-        output_name = args.output or f"{data.t[0]:%Y_%m_%d_%H%M}_{meta_data['launch_site']}.kml"
-        if os.path.isfile(output_name) and not args.force:
-            print(f"Can not save kml file, because it already exists: {output_name}")
-        else:
-            write_kml(output_name, data, meta_data)
+# if __name__ == '__main__':
+#     parser = argparse.ArgumentParser(description="IGC to KML converter for flight logs, so they can be viewed with Google Earth.")
+#     parser.add_argument("input", nargs="+", help="Input file name(s)")
+#     parser.add_argument("--output", help="Output file name", default=None)
+#     parser.add_argument("--force", "-f", help="Overwrite output file if it exists", action="store_true")
+#     parser.add_argument("--pilot", "-p", help="Pilot's name (will appear on flight path name)", type=str)
+#     parser.add_argument("--units", "-u", help="Ground speed units, kts or kmh (default kmh)", type=str, choices=["m/s", "kmh", "mph", "kts"], default="kmh")
+#     args = parser.parse_args()
+#
+#     for input_fname in args.input:
+#         data, meta_data = parse_igc_header(input_fname)
+#         data, meta_data = process_data(data, meta_data, speed_unit=args.units)
+#         meta_data["pilot"] = args.pilot
+#         output_name = args.output or f"{data.t[0]:%Y_%m_%d_%H%M}_{meta_data['launch_site']}.kml"
+#         if os.path.isfile(output_name) and not args.force:
+#             print(f"Can not save kml file, because it already exists: {output_name}")
+#         else:
+#             write_kml(output_name, data, meta_data)
 
 
 
