@@ -4,6 +4,8 @@
 *.igc
 *.IGC
 *.kmz
+*.KMZ
+*.pdf
 
 __pycache__/
 *.py[cod]
