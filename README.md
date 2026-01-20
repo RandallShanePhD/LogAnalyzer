@@ -1,6 +1,13 @@
 # LogAnalyzer
 updated as of 01/2025
 
+INSTRUCTIONS:
+1) Place IGC files in the Logs directory
+2) Run Command: python3 LogAnalyzer.py or ./LogAnalyzer.py
+3) Results will print to screen
+4) KMZ files if selected will be placed in the KMZs directory
+
+
 ## TO DO:
 - Detect type of flight (Thermal vs Ridge)
 - Low save detector
