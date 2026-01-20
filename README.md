@@ -1,19 +1,19 @@
 # LogAnalyzer
+updated as of 01/2025
 
 ## TO DO:
 - Detect type of flight (Thermal vs Ridge)
 - Low save detector
 - Add Speed to Fly / MacReady Calc
-- Fix KMZ crator (adjust to ground)
 
 
 ## Analysis Methodology
 ### Default Settings
-- climb_time_threshold: 10 seconds
 - climb_ascend_threshold: 0.5 m/s (or you're not really climbing)
-- glide_time_threshold: 15 seconds
-- sink_time_threshold: 7 seconds
-- sink_descend_threshold: 2.5 m/s
+- sink_descend_threshold: 2.5 m/s 
+- climb_time_threshold: 10 seconds (not currently used)
+- glide_time_threshold: 15 seconds (not currently used)
+- sink_time_threshold: 7 seconds (not currently used)
 
 ### Climbs
 - Definition: consecutive readings greater than <climb_time_threshold>
