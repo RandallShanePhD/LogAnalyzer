@@ -74,7 +74,7 @@ def create_kmz(kmz_data):
             f.write('<LineString>\n')
             f.write('<extrude>0</extrude>\n')
             f.write('<tessellate>1</tessellate>\n')
-            f.write('<altitudeMode>absolute</altitudeMode>\n')
+            f.write('<altitudeMode>relativeToGround</altitudeMode>\n')
             f.write('<coordinates>\n')
             writable_block = " ".join(block)
             f.write(f'{writable_block}\n')  # coordinate block
