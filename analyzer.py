@@ -17,7 +17,6 @@ settings = {"averaging_factor": 10,
 
 # Reference Functions ---------------------------/
 def calc_lift_sink(altitudes: [float]) -> float:
-    # Remove any outliers over 2 sd
     value = 0
     try:
         meters_per_second = [float(t - s) for s, t in zip(altitudes, altitudes[1:])]
@@ -31,6 +30,40 @@ def calc_lift_sink(altitudes: [float]) -> float:
         value = 0
     finally:
         return value
+
+
+def calculate_climb_efficiency(altis, global_avg_climb, averaging_factor):
+    if len(altis) < 2:
+        return 0.0
+    
+    climb_rates = [float(t - s) for s, t in zip(altis, altis[1:])]
+    
+    net_gain = altis[-1] - altis[0]
+    expected_gain = len(climb_rates) * averaging_factor * global_avg_climb if global_avg_climb > 0 else 1
+    
+    net_efficiency = min(net_gain / expected_gain, 1.0) if expected_gain > 0 else 0.0
+    
+    try:
+        rate_sd = stat.stdev(climb_rates)
+        consistency_score = max(0, 1 - (rate_sd / (global_avg_climb * 2))) if global_avg_climb > 0 else 0.5
+    except:
+        consistency_score = 0.5
+    
+    threshold = global_avg_climb * 0.5
+    sustained_count = sum(1 for r in climb_rates if r >= threshold)
+    sustained_ratio = sustained_count / len(climb_rates) if climb_rates else 0
+    
+    positive_steps = sum(1 for r in climb_rates if r > 0)
+    positive_ratio = positive_steps / len(climb_rates) if climb_rates else 0
+    
+    efficiency = (
+        net_efficiency * 0.35 +
+        consistency_score * 0.25 +
+        sustained_ratio * 0.25 +
+        positive_ratio * 0.15
+    )
+    
+    return round(min(efficiency, 1.0), 2)
 
 
 def convert_hm_to_dt(raw_date, raw_time):
@@ -78,27 +111,15 @@ def bearing(loc1, loc2):
 
 
 def create_kmz(kmz_data):
-    # Native KMZ Creator
-    # from kmz_creator import create_kmz
-    # create_kmz(kmz_data)
-
-    # for IGC2KML Library
-    infile = f"Logs/{kmz_data['filename']}.igc"
-    outfile = f"KMZs/{kmz_data['filename']}.kmz"
-    if os.path.exists(outfile):
-        os.remove(outfile)
-
-    from igc2kml import parse_igc_header, process_data, write_kml
-    data, meta_data = parse_igc_header(infile)
-    data, meta_data = process_data(data, meta_data, speed_unit=settings['kmz_speed_units'])
-    write_kml(outfile, data, meta_data)
+    from kmz_creator import create_enhanced_kmz
+    create_enhanced_kmz(kmz_data)
 
 
 # Operational Functions -----------------------/
 def instructions():
     print("\n")
     print("-----------------------------------------------------")
-    print("--   IGC Log File Analyzer  (v2026-01)             --")
+    print("--   IGC Log File Analyzer  (v2026-04)             --")
     print("--   Wander Expeditions LLC                        --")
     print("--   Randall Shane PhD                             --")
     print("--   Randall@WanderExpeditions.com                 --")
@@ -397,7 +418,8 @@ def load_igc(in_igc_file):
                "details": analysis["details"],
                "µ_sustained_climb": analysis["µ_sustained_climb"],
                "µ_sustained_glide": analysis["µ_sustained_glide"],
-               "model_data": model_data}
+               "model_data": model_data,
+               "lon_lat_alt_list": lon_lat_alt_list}
 
     return summary
 
@@ -457,19 +479,34 @@ def flight_analyzer(analysis_data):
     climbing_grades = []
     gliding_grades = []
     sinking_grades = []
+    all_climb_rates = []
+    
     for i, block in enumerate(blocks):
         if block != []:
             tyype = blocks_cat[i][0]
             altis = [x[3] for x in block]
-            if tyype == "C":  # climbs analysis - graded on percent of time altitude increases continuously in climbing block
-                total_climb = altis[-1] - altis[0]
-                climbing = 0
-                for i, alti in enumerate(altis):
-                    if i > 0:
-                        if alti > altis[i - 1]:
-                            climbing += 1
-                climbing_grades.append(round(float(climbing / len(altis)), 2))
-            elif tyype == "G":  # glides analysis - Calc L/D & aggregate (somehow)
+            if tyype == "C":
+                climb_rates = [float(t - s) for s, t in zip(altis, altis[1:])]
+                all_climb_rates.extend(climb_rates)
+    
+    global_avg_climb = 0.0
+    if all_climb_rates:
+        try:
+            sd_all = stat.stdev(all_climb_rates)
+            mn_all = stat.mean(all_climb_rates)
+            filtered_rates = [r for r in all_climb_rates if mn_all - 2*sd_all <= r <= mn_all + 2*sd_all]
+            global_avg_climb = stat.mean(filtered_rates) if filtered_rates else stat.mean(all_climb_rates)
+        except:
+            global_avg_climb = stat.mean(all_climb_rates) if all_climb_rates else 0
+
+    for i, block in enumerate(blocks):
+        if block != []:
+            tyype = blocks_cat[i][0]
+            altis = [x[3] for x in block]
+            if tyype == "C":
+                efficiency = calculate_climb_efficiency(altis, global_avg_climb, settings["averaging_factor"])
+                climbing_grades.append(efficiency)
+            elif tyype == "G":  # glides analysis - Calc L/D & aggregate
                 lift = block[-1][3] - block[0][3]
                 if lift == 0:
                     lift = 1
@@ -580,8 +617,10 @@ def display_summary_stats(s):
     print("------------------------------------------\n")
     print("'D' for Detailed flight inspection of blocks over 90 seconds long")
     print("'A' for ALL flight blocks")
-    print("'C', 'G', 'S' for CLIMBS, GLIDES or SINKS only")
+    print("'C', 'S' for CLIMBS or SINKS only")
+    print("'g' for Glide blocks only | 'G' for Glide Performance Analysis")
     print("'K' for KML export of flight path")
+    print("'T' for Thermal Analysis")
     print("[return] to continue")
     inp = input()
     if inp == "D":
@@ -592,16 +631,26 @@ def display_summary_stats(s):
     elif inp == "C":
         climb_blocks = [x for x in s["details"] if x['tyype'] == 'Climb']
         display_details(climb_blocks)
-    elif inp == "G":
+    elif inp == "g":
         glide_blocks = [x for x in s["details"] if x['tyype'] == 'Glide']
         display_details(glide_blocks)
+    elif inp == "G":
+        display_glide_analysis(s)
     elif inp == "S":
         sink_blocks = [x for x in s["details"] if x['tyype'] == 'Sink']
         display_details(sink_blocks)
     elif inp == "K":
-        kmz_data = {"pilot": s['pilot'],
-                    "filename": s['filename'][:-4]}
+        kmz_data = {
+            "pilot": s['pilot'],
+            "filename": s['filename'][:-4],
+            "takeoff_gps": s['takeoff_gps'],
+            "landing_gps": s['landing_gps'],
+            "lon_lat_alt_list": s.get('lon_lat_alt_list', []),
+            "details": s['details']
+        }
         create_kmz(kmz_data)
+    elif inp == "T":
+        display_thermal_analysis(s)
     else:
         pass
 
@@ -623,6 +672,272 @@ def display_details(details):
         print("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -")
     print("return to continue")
     input()
+
+
+def detect_circling(blocks, min_turns=2, min_duration=20, min_alt_gain=50):
+    circling_blocks = []
+    for block in blocks:
+        if block['tyype'] == 'Climb' and block['time_secs'] >= min_duration:
+            alt_gain = block['altitude_end_m'] - block['altitude_start_m']
+            if alt_gain >= min_alt_gain:
+                start_loc = block['loc_start']
+                end_loc = block['loc_end']
+                distance = haversine(start_loc, end_loc) * 1000
+                if distance < 500:
+                    circling_blocks.append(block)
+    return circling_blocks
+
+
+def calculate_thermal_stats(thermal_blocks, all_blocks):
+    if not thermal_blocks:
+        return {
+            'thermal_count': 0,
+            'avg_thermal_strength': 0,
+            'max_thermal_strength': 0,
+            'min_thermal_strength': 0,
+            'avg_thermal_duration': 0,
+            'total_thermal_time': 0,
+            'avg_alt_gain': 0,
+            'total_alt_gain': 0,
+            'thermal_locations': [],
+            'thermal_strengths': []
+        }
+
+    strengths = [b['avg_lift_sink_ms'] for b in thermal_blocks]
+    durations = [b['time_secs'] for b in thermal_blocks]
+    alt_gains = [b['altitude_end_m'] - b['altitude_start_m'] for b in thermal_blocks]
+    locations = [b['loc_start'] for b in thermal_blocks]
+
+    total_flight_time = sum(b['time_secs'] for b in all_blocks)
+    total_thermal_time = sum(durations)
+
+    return {
+        'thermal_count': len(thermal_blocks),
+        'avg_thermal_strength': round(stat.mean(strengths), 2),
+        'max_thermal_strength': max(strengths),
+        'min_thermal_strength': min(strengths),
+        'avg_thermal_duration': round(stat.mean(durations), 1),
+        'total_thermal_time': total_thermal_time,
+        'thermal_time_pct': round(total_thermal_time / total_flight_time * 100, 1) if total_flight_time > 0 else 0,
+        'avg_alt_gain': round(stat.mean(alt_gains), 1),
+        'total_alt_gain': sum(alt_gains),
+        'thermal_locations': locations,
+        'thermal_strengths': strengths
+    }
+
+
+def calculate_thermal_centering(thermal_blocks):
+    centering_scores = []
+    for block in thermal_blocks:
+        if block['time_secs'] >= 30:
+            strength = block['avg_lift_sink_ms']
+            duration = block['time_secs']
+            if strength > 0:
+                centering_scores.append(strength)
+    if centering_scores:
+        return round(stat.mean(centering_scores), 2)
+    return 0
+
+
+def analyze_thermals(blocks, all_blocks):
+    circling_blocks = detect_circling(blocks)
+    stats = calculate_thermal_stats(circling_blocks, all_blocks)
+    stats['avg_centering_score'] = calculate_thermal_centering(circling_blocks)
+    stats['circling_blocks'] = circling_blocks
+    return stats
+
+
+def display_thermal_analysis(s):
+    thermals = analyze_thermals(s['details'], s['details'])
+
+    print("\n" + "=" * 60)
+    print("THERMAL ANALYSIS")
+    print("=" * 60)
+
+    print(f"\n  Thermal Count: {thermals['thermal_count']}")
+    if thermals['thermal_count'] == 0:
+        print("  No thermals detected (no circling behavior found)")
+        print("\n  return to continue")
+        input()
+        return
+
+    print(f"  Average Thermal Strength: {thermals['avg_thermal_strength']} m/s || {msToFpm(thermals['avg_thermal_strength'])} fpm")
+    print(f"  Max Thermal Strength: {thermals['max_thermal_strength']} m/s || {msToFpm(thermals['max_thermal_strength'])} fpm")
+    print(f"  Min Thermal Strength: {thermals['min_thermal_strength']} m/s || {msToFpm(thermals['min_thermal_strength'])} fpm")
+    print(f"  Average Thermal Duration: {thermals['avg_thermal_duration']} seconds")
+    print(f"  Total Time in Thermals: {thermals['total_thermal_time']} seconds ({thermals['thermal_time_pct']}% of flight)")
+    print(f"  Average Altitude Gain per Thermal: {thermals['avg_alt_gain']} m || {meters_to_feet(thermals['avg_alt_gain'])} ft")
+    print(f"  Total Altitude Gained in Thermals: {thermals['total_alt_gain']} m || {meters_to_feet(thermals['total_alt_gain'])} ft")
+    print(f"  Average Centering Score: {thermals['avg_centering_score']} m/s")
+
+    print("\n" + "-" * 60)
+    print("Individual Thermal Details:")
+    print("-" * 60)
+    for i, thermal in enumerate(thermals['circling_blocks'], 1):
+        alt_gain = thermal['altitude_end_m'] - thermal['altitude_start_m']
+        print(f"\n  Thermal #{i}:")
+        print(f"    Duration: {thermal['time_secs']}s | Strength: {thermal['avg_lift_sink_ms']} m/s ({msToFpm(thermal['avg_lift_sink_ms'])} fpm)")
+        print(f"    Altitude: {thermal['altitude_start_m']}m -> {thermal['altitude_end_m']}m (gain: {alt_gain}m)")
+        print(f"    Location: {thermal['loc_start']}")
+
+    print("\n" + "=" * 60)
+    print("'D' for detailed thermal blocks only")
+    print("'L' for thermal locations list")
+    print("[return] to continue")
+    inp = input()
+    if inp == "D":
+        display_details(thermals['circling_blocks'])
+    elif inp == "L":
+        print("\nThermal Locations (for mapping):")
+        for i, loc in enumerate(thermals['thermal_locations'], 1):
+            print(f"  Thermal #{i}: {loc[0]:.6f}, {loc[1]:.6f}")
+        print("\nreturn to continue")
+        input()
+
+
+def analyze_glide_performance(blocks, glider_type=None):
+    glide_blocks = [b for b in blocks if b['tyype'] == 'Glide']
+    if not glide_blocks:
+        return {
+            'glide_count': 0,
+            'best_glide_ratio': 0,
+            'best_glide_alt': 0,
+            'avg_glide_ratio': 0,
+            'avg_glide_ratio_alt': 0,
+            'avg_sink_rate': 0,
+            'macready_optimal': 0,
+            'cruise_efficiency': 0,
+            'glide_polar': []
+        }
+
+    glide_data = []
+    for block in glide_blocks:
+        alt_loss = block['altitude_start_m'] - block['altitude_end_m']
+        distance = block['total_distance_m']
+        if alt_loss > 10 and distance > 50:
+            l_d = round(distance / alt_loss, 2) if alt_loss > 0 else 0
+            avg_alt = (block['altitude_start_m'] + block['altitude_end_m']) / 2
+            sink_rate = abs(block['avg_lift_sink_ms'])
+            glide_data.append({
+                'l_d': l_d,
+                'altitude': avg_alt,
+                'sink_rate': sink_rate,
+                'distance': distance,
+                'alt_loss': alt_loss,
+                'duration': block['time_secs']
+            })
+
+    if not glide_data:
+        return {
+            'glide_count': 0,
+            'best_glide_ratio': 0,
+            'best_glide_alt': 0,
+            'avg_glide_ratio': 0,
+            'avg_glide_ratio_alt': 0,
+            'avg_sink_rate': 0,
+            'macready_optimal': 0,
+            'cruise_efficiency': 0,
+            'glide_polar': []
+        }
+
+    glide_data.sort(key=lambda x: x['l_d'], reverse=True)
+    best = glide_data[0]
+
+    avg_ld = round(stat.mean([g['l_d'] for g in glide_data]), 2)
+    avg_alt = round(stat.mean([g['altitude'] for g in glide_data]), 1)
+    avg_sink = round(stat.mean([g['sink_rate'] for g in glide_data]), 2)
+
+    total_glide_dist = sum(g['distance'] for g in glide_data)
+    total_glide_alt = sum(g['alt_loss'] for g in glide_data)
+    overall_ld = round(total_glide_dist / total_glide_alt, 2) if total_glide_alt > 0 else 0
+
+    thermals = [b for b in blocks if b['tyype'] == 'Climb']
+    if thermals:
+        avg_climb = stat.mean([t['avg_lift_sink_ms'] for t in thermals])
+    else:
+        avg_climb = 1.0
+
+    macready = round(avg_sink / (1 + 1/avg_ld), 2) if avg_ld > 0 else 0
+
+    glide_polar = sorted(glide_data, key=lambda x: x['sink_rate'])
+
+    return {
+        'glide_count': len(glide_data),
+        'best_glide_ratio': best['l_d'],
+        'best_glide_alt': int(best['altitude']),
+        'best_glide_sink': best['sink_rate'],
+        'avg_glide_ratio': avg_ld,
+        'avg_glide_ratio_alt': avg_alt,
+        'overall_glide_ratio': overall_ld,
+        'avg_sink_rate': avg_sink,
+        'macready_optimal': macready,
+        'avg_climb_rate': round(avg_climb, 2),
+        'cruise_efficiency': round(avg_ld / overall_ld * 100, 1) if overall_ld > 0 else 0,
+        'glide_polar': glide_polar,
+        'glide_blocks': glide_data
+    }
+
+
+def display_glide_analysis(s):
+    stats = analyze_glide_performance(s['details'], s.get('glider'))
+
+    print("\n" + "=" * 60)
+    print("GLIDE PERFORMANCE ANALYSIS")
+    print("=" * 60)
+
+    print(f"\n  Glide Segments Analyzed: {stats['glide_count']}")
+    if stats['glide_count'] == 0:
+        print("  No glide segments found for analysis")
+        print("\n  return to continue")
+        input()
+        return
+
+    print(f"\n  BEST GLIDE:")
+    print(f"    Glide Ratio: {stats['best_glide_ratio']}:1")
+    print(f"    Altitude: {stats['best_glide_alt']} m || {meters_to_feet(stats['best_glide_alt'])} ft")
+    print(f"    Sink Rate: {stats['best_glide_sink']} m/s")
+
+    print(f"\n  AVERAGE GLIDE:")
+    print(f"    Glide Ratio: {stats['avg_glide_ratio']}:1")
+    print(f"    Average Altitude: {stats['avg_glide_ratio_alt']} m || {meters_to_feet(stats['avg_glide_ratio_alt'])} ft")
+    print(f"    Average Sink Rate: {stats['avg_sink_rate']} m/s || {msToFpm(stats['avg_sink_rate'])} fpm")
+    print(f"    Overall Glide Ratio: {stats['overall_glide_ratio']}:1")
+
+    print(f"\n  SPEED-TO-FLY (MacReady):")
+    print(f"    Optimal MacReady Setting: {stats['macready_optimal']} m/s || {msToFpm(stats['macready_optimal'])} fpm")
+    print(f"    Average Climb Rate: {stats['avg_climb_rate']} m/s || {msToFpm(stats['avg_climb_rate'])} fpm")
+    print(f"    Cruise Efficiency: {stats['cruise_efficiency']}%")
+
+    print(f"\n  INTERPRETATION:")
+    if stats['cruise_efficiency'] > 90:
+        print(f"    Excellent cruise efficiency - consistent glide performance")
+    elif stats['cruise_efficiency'] > 75:
+        print(f"    Good cruise efficiency")
+    else:
+        print(f"    Consider optimizing cruise speed for conditions")
+
+    print("\n" + "-" * 60)
+    print("Top 5 Glides by L/D:")
+    print("-" * 60)
+    for i, g in enumerate(stats['glide_blocks'][:5], 1):
+        print(f"  #{i}: L/D {g['l_d']}:1 | Alt {int(g['altitude'])}m | Sink {g['sink_rate']} m/s | Dist {int(g['distance'])}m")
+
+    print("\n" + "=" * 60)
+    print("'D' for detailed glide blocks")
+    print("'P' for glide polar data")
+    print("[return] to continue")
+    inp = input()
+    if inp == "D":
+        display_details([b for b in s['details'] if b['tyype'] == 'Glide'])
+    elif inp == "P":
+        print("\nGlide Polar (sink rate vs glide ratio):")
+        print("-" * 40)
+        print(f"  {'Sink (m/s)':<12} {'L/D':<8} {'Alt (m)':<10}")
+        print("-" * 40)
+        for g in stats['glide_polar']:
+            print(f"  {g['sink_rate']:<12.2f} {g['l_d']:<8.2f} {int(g['altitude']):<10}")
+        print("\nreturn to continue")
+        input()
 
 
 if __name__ == '__main__':
