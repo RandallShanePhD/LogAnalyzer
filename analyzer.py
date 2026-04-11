@@ -568,6 +568,15 @@ def flight_analyzer(analysis_data):
 
 
 def display_summary_stats(s):
+    """
+    The efficiency score (0-100%) is a weighted composite of four factors:
+    - Net Efficiency (35%): Actual altitude gain vs. expected gain based on global average climb rate
+    - Consistency Score (25%): Lower variance in climb rates scores higher (penalizes bobbing)
+    - Sustained Ratio (25%): Percentage of readings maintaining ≥50% of average climb rate
+    - Positive Steps (15%): Percentage of readings showing any altitude gain
+    This rewards smooth, consistent climbs with minimal altitude loss, sustained lift rather than
+    intermittent bobbing, and optimal thermal centering.
+    """
     formatted_date = dt.datetime.strftime(s['flight_date'], "%d %b %Y")
     formatted_duration = str(dt.timedelta(seconds=s["duration"]))
 
@@ -612,8 +621,10 @@ def display_summary_stats(s):
         s['sinks_num'] / (s['climbs_num'] + s['glides_num'] + s['sinks_num']) * 100, 2)
     print(f"  You are sinking {sink_ratio}% of the flight")
     print(f"Efficiency Grade: {s['climb_grade']}%")
-    print("  Each single climb is graded on percent of time altitude increases continuously while in the")
-    print("  climbing block. The overall grade is the mean of all climbs grades together as a percentage.")
+    print("  Calculated: 35% Net Efficiency, 25% Consistency,")
+    print("  25% Sustained Ratio, 15% Positive Gain.")
+    print("  This rewards smooth, consistent climbs with minimal altitude loss & sustained")
+    print("  lift (rather than intermittent bobbing) with optimal thermal centering.")
     print("------------------------------------------\n")
     print("'D' for Detailed flight inspection of blocks over 90 seconds long")
     print("'A' for ALL flight blocks")
