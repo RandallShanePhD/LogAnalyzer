@@ -348,8 +348,6 @@ def load_igc(in_igc_file):
                "model_data": model_data,
                "lon_lat_alt_list": lon_lat_alt_list}
 
-
-
     return summary
 
 
@@ -569,6 +567,7 @@ def display_summary_stats(s):
     print("\n========================================================================")
     print("THERMAL ANALYSIS")
     display_thermal_analysis(s)
+    # TODO: validate kmz file creator
 
 
 def display_details(details):
@@ -586,7 +585,6 @@ def display_details(details):
         print(
             f"  Distance Start-End: {distance}m | {meters_to_feet(distance)}ft   Distance Total: {detail['total_distance_m']}m | {meters_to_feet(detail['total_distance_m'])}ft")
         print(" - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -")
-
 
 
 def detect_circling(blocks, min_turns=2, min_duration=20, min_alt_gain=50):
@@ -664,11 +662,6 @@ def analyze_thermals(blocks, all_blocks):
 
 def display_thermal_analysis(s):
     thermals = analyze_thermals(s['details'], s['details'])
-    #
-    # print("\n" + "=" * 60)
-    # print("THERMAL ANALYSIS")
-    # print("=" * 60)
-
     print(f"\n  Thermal Count: {thermals['thermal_count']}")
     if thermals['thermal_count'] == 0:
         print("  No thermals detected (no circling behavior found)")
@@ -690,13 +683,16 @@ def display_thermal_analysis(s):
     print(
         f"  Total Altitude Gained in Thermals: {thermals['total_alt_gain']} m || {meters_to_feet(thermals['total_alt_gain'])} ft")
     print(f"  Average Centering Score: {thermals['avg_centering_score']} m/s")
+    # TODO: What is this ^?
 
     for i, thermal in enumerate(thermals['circling_blocks'], 1):
         alt_gain = thermal['altitude_end_m'] - thermal['altitude_start_m']
         print(f"\n  Thermal #{i}:")
         print(
             f"    Duration: {thermal['time_secs']}s | Strength: {thermal['avg_lift_sink_ms']} m/s ({msToFpm(thermal['avg_lift_sink_ms'])} fpm)")
-        print(f"    Altitude: {thermal['altitude_start_m']}m -> {thermal['altitude_end_m']}m (gain: {alt_gain}m)")
+        print(f"    Altitude: {thermal['altitude_start_m']} m -> {thermal['altitude_end_m']} m (gain: {alt_gain}m)")
+        print(
+            f"              {meters_to_feet(thermal['altitude_start_m'])} ft -> {meters_to_feet(thermal['altitude_end_m'])} ft (gain: {meters_to_feet(alt_gain)} ft)")
         print(f"    Location: {thermal['loc_start']}")
 
 
@@ -785,11 +781,6 @@ def analyze_glide_performance(blocks, glider_type=None):
 
 def display_glide_analysis(s):
     stats = analyze_glide_performance(s['details'], s.get('glider'))
-
-    # print("\n" + "=" * 60)
-    # print("GLIDE PERFORMANCE ANALYSIS")
-    # print("=" * 60)
-
     print(f"  Segments Analyzed: {stats['glide_count']}")
     if stats['glide_count'] == 0:
         print("  No glide segments found for analysis")
@@ -858,9 +849,8 @@ def analyze_file(igc_file):
 # TODO: Debug glide ratio calculation
 
 
-
-
 if __name__ == '__main__':
     # Specify the file
-    igc_file = '35k_example.igc'
+    # igc_file = '35k_example.igc'
+    igc_file = 'SB-HSB.igc'
     analyze_file(igc_file)
