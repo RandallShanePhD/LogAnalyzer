@@ -115,21 +115,46 @@ def create_kmz(kmz_data):
     create_enhanced_kmz(kmz_data)
 
 
-def efficiency_grade_lookup(grade_num):
-    if grade_num >= 90:
-        return "Exceptional. Near-perfect thermal centering. You're consistently in\n the core, smooth and steady. Rare even for experienced pilots."
-    elif grade_num >= 75:
-        return "Excellent. Strong thermal technique. Well-centered climbs, minimal\n drift into sink, good reactions to lift changes."
-    elif grade_num >= 64:
-        return "Good. Solid flying. You're finding lift and making progress, but\n there's room to tighten your circles or react faster."
-    elif grade_num >= 45:
-        return "Average. Functional but inconsistent. Some time in core, some time\n drifting. Typical for newer pilots or marginal conditions."
-    elif grade_num >= 30:
-        return "Below Average. Significant time in sink or off-center. Lift is being\n found but not maximized."
-    elif grade_num >= 15:
-        return "Below 30%. Poor. Struggling to find or stay in lift. Lots of altitude\n loss within climbs, poor centering, or very weak/active conditions."
-    else:
-        return "Poor. Struggling to find or stay in lift. Lots of altitude loss within\n climbs, poor centering, or very weak/active conditions."
+def efficiency_grade_lookup(grade_num, flight_type='thermal'):
+    if flight_type == 'soaring':
+        if grade_num >= 90:
+            return "Exceptional. Masterful ridge running — you stayed in the lift band\n almost the entire flight with minimal sink."
+        elif grade_num >= 75:
+            return "Excellent. Strong ridge reading — you found consistent lift and\n maintained altitude well along the terrain."
+        elif grade_num >= 64:
+            return "Good. Solid soaring — you're staying in lift most of the time,\n but there are stretches where you drift out of the band."
+        elif grade_num >= 45:
+            return "Average. Functional ridge flight — some time in lift, some time\n sinking. Look for better terrain features to work."
+        elif grade_num >= 30:
+            return "Below Average. Significant time out of the lift band. Try staying\n tighter to the ridge and reading the wind direction better."
+        else:
+            return "Poor. Struggling to stay in lift. Focus on identifying where the\n wind hits the ridge and staying in the rising air."
+    elif flight_type == 'xc':
+        if grade_num >= 90:
+            return "Exceptional. Elite cross-country performance — efficient climbs,\n tight glides, and excellent route selection."
+        elif grade_num >= 75:
+            return "Excellent. Strong XC technique — well-centered climbs and\n efficient glides between thermals."
+        elif grade_num >= 64:
+            return "Good. Solid XC flying — you're making progress and finding lift\n consistently, but polish your transitions."
+        elif grade_num >= 45:
+            return "Average. Functional XC flight — managing climbs and glides but\n losing efficiency in transitions or off-core."
+        elif grade_num >= 30:
+            return "Below Average. Significant time in sink or struggling to connect\n climbs. Work on glide speed and thermal entry."
+        else:
+            return "Poor. Difficult flight — struggling to stay up or make progress.\n Review weather conditions and route planning."
+    else:  # thermal
+        if grade_num >= 90:
+            return "Exceptional. Near-perfect thermal centering. You're consistently in\n the core, smooth and steady. Rare even for experienced pilots."
+        elif grade_num >= 75:
+            return "Excellent. Strong thermal technique. Well-centered climbs, minimal\n drift into sink, good reactions to lift changes."
+        elif grade_num >= 64:
+            return "Good. Solid flying. You're finding lift and making progress, but\n there's room to tighten your circles or react faster."
+        elif grade_num >= 45:
+            return "Average. Functional but inconsistent. Some time in core, some time\n drifting. Typical for newer pilots or marginal conditions."
+        elif grade_num >= 30:
+            return "Below Average. Significant time in sink or off-center. Lift is being\n found but not maximized."
+        else:
+            return "Poor. Struggling to find or stay in lift. Lots of altitude loss within\n climbs, poor centering, or very weak/active conditions."
 
 
 def load_igc(in_igc_file):
@@ -257,10 +282,11 @@ def load_igc(in_igc_file):
                 alt_m = int(line[30:35])  # gps altitude
             landing_alt_m = alt_m
 
-            # flight area calculation
-            fa_dist = haversine((takeoff_lat, takeoff_lon), (lat, lon))
-            if fa_dist > flight_area_km:
-                flight_area_km = fa_dist
+            # flight area calculation (only after takeoff is established, skip zero coords)
+            if not takeoff_flag and lat != 0.0 and lon != 0.0:
+                fa_dist = haversine((takeoff_lat, takeoff_lon), (lat, lon))
+                if fa_dist > flight_area_km:
+                    flight_area_km = fa_dist
 
             # List for kmz path
             lon_lat_alt_list.append((lon, lat, alt_m))
@@ -301,7 +327,7 @@ def load_igc(in_igc_file):
     if duration < 0:
         duration = duration + (24 * 60 * 60)
 
-    analysis = flight_analyzer(analysis_data)
+    analysis = flight_analyzer(analysis_data, flight_area_km)
 
     # Weather Model Data
     model_data["takeoff_datetime"] = takeoff_dt
@@ -332,9 +358,10 @@ def load_igc(in_igc_file):
                "landing_heading": landing_heading,
                "total_distance": round(total_distance_km, 1),
                "takeoff_to_land_dist": round(takeoff_to_land_dist, 1),
-               "flight_area_diameter": round(flight_area_km / 1000, 2),
+                "flight_area_diameter": round(flight_area_km, 2),
                "duration": duration,
                # Analysis Data
+               "flight_type": analysis["flight_type"],
                "climbs_num": analysis["climbs_num"],
                "glides_num": analysis["glides_num"],
                "sinks_num": analysis["sinks_num"],
@@ -351,7 +378,7 @@ def load_igc(in_igc_file):
     return summary
 
 
-def flight_analyzer(analysis_data):
+def flight_analyzer(analysis_data, flight_area_km=0.0):
     # from settings
     # "averaging_factor": 10,
     # "climb_ascend_threshold": 0.5,
@@ -434,10 +461,10 @@ def flight_analyzer(analysis_data):
                 efficiency = calculate_climb_efficiency(altis, global_avg_climb, settings["averaging_factor"])
                 climbing_grades.append(efficiency)
             elif tyype == "G":  # glides analysis - Calc L/D & aggregate
-                lift = block[-1][3] - block[0][3]
+                lift = abs(block[-1][3] - block[0][3])
                 if lift == 0:
                     lift = 1
-                distance = round(sum(x[5] for x in block) * 100)
+                distance = round(sum(x[5] for x in block) * 1000)
                 l_over_d = round(distance / lift, 2)
                 gliding_grades.append(l_over_d)
             elif tyype == "S":  # record abs of sink rate
@@ -459,7 +486,7 @@ def flight_analyzer(analysis_data):
             block_detail["avg_lift_sink_ms"] = blocks_cat[i][1]
             block_detail["loc_start"] = (block[0][1], block[0][2])
             block_detail["loc_end"] = (block[-1][1], block[-1][2])
-            block_detail["total_distance_m"] = round(sum(x[5] for x in block) * 100)
+            block_detail["total_distance_m"] = round(sum(x[5] for x in block) * 1000)
 
             details.append(block_detail)
 
@@ -480,6 +507,32 @@ def flight_analyzer(analysis_data):
     max_sustained_climb = max([x['avg_lift_sink_ms'] for x in details if x["tyype"] == "Climb"])
     avg_sustained_glide = round(stat.mean([x['avg_lift_sink_ms'] for x in details if x["tyype"] == "Glide"]), 2)
 
+    circling_blocks = detect_circling(details)
+    flight_type = 'soaring'
+    if circling_blocks:
+        total_circling_time = sum(b['time_secs'] for b in circling_blocks)
+        total_time = sum(b['time_secs'] for b in details)
+        if total_time > 0 and (total_circling_time / total_time) > 0.10:
+            flight_type = 'xc' if flight_area_km > 8 else 'thermal'  # 8k/5mi betw thermal and XC
+
+    if flight_type == 'soaring':
+        total_time = sum(b['time_secs'] for b in details)
+        climb_time = sum(b['time_secs'] for b in details if b['tyype'] == 'Climb')
+        climb_ratio = climb_time / total_time if total_time > 0 else 0
+
+        climb_rates = [b['avg_lift_sink_ms'] for b in details if b['tyype'] == 'Climb']
+        avg_climb = stat.mean(climb_rates) if climb_rates else 0
+
+        sink_time = sum(b['time_secs'] for b in details if b['tyype'] == 'Sink')
+        sink_ratio = sink_time / total_time if total_time > 0 else 0
+
+        time_score = min(climb_ratio / 0.5, 1.0)
+        strength_score = min(avg_climb / 2.0, 1.0)
+        sink_score = max(1.0 - sink_ratio * 2, 0.0)
+
+        efficiency = time_score * 0.35 + strength_score * 0.35 + sink_score * 0.30
+        climb_grade = round(efficiency * 100, 2)
+
     analysis_data = {"climbs_num": len(climbing_grades),
                      "glides_num": len(gliding_grades),
                      "sinks_num": len(sinking_grades),
@@ -489,7 +542,12 @@ def flight_analyzer(analysis_data):
                      "µ_sustained_climb": avg_sustained_climb,
                      "µ_sustained_glide": avg_sustained_glide,
                      "max_sustained_climb": max_sustained_climb,
+                     "flight_type": flight_type,
                      "details": details}
+
+    # Save Add on Files
+    # HOLD: Write 'all blocks' file & save somewhere
+    # all_blocks = details
 
     return analysis_data
 
@@ -518,6 +576,7 @@ def display_summary_stats(s):
     print("STATISTICS:")
     print(f"  Date: {formatted_date}")
     print(f"  Duration: {formatted_duration}")
+    print(f"  Flight Type: {s['flight_type']}")
     print(f"  Takeoff GPS: {s['takeoff_gps']}")
     print(f"  Takeoff DateTime: {s['takeoff_datetime']}")
     print(f"  Takeoff Altitude: {s['takeoff_alt']} m || {meters_to_feet(s['takeoff_alt'])} ft")
@@ -551,23 +610,35 @@ def display_summary_stats(s):
     sink_ratio = round(
         s['sinks_num'] / (s['climbs_num'] + s['glides_num'] + s['sinks_num']) * 100, 2)
     print(f"  You are sinking {sink_ratio}% of the flight")
-    print("\n========================================================================")
-    print(f"EFFICIENCY GRADE: {s['climb_grade']}%")
-    narative = efficiency_grade_lookup(s['climb_grade'])
+    print("\n========================================================================\nFLIGHT TYPE: " + s.get('flight_type', 'thermal').upper())
+    print(f"EFFICIENCY GRADE ({s.get('flight_type', 'thermal').upper()}): {s['climb_grade']}%")
+    narative = efficiency_grade_lookup(s['climb_grade'], s.get('flight_type', 'thermal'))
     print(f"\t{narative}")
     print("\n========================================================================")
     print("DETAILED FLIGHT INSPECTION OF BLOCKS OVER 90 SECONDS LONG")
     print("  (all blocks zipped and attached)\n")
     large_blocks = [x for x in s["details"] if x['time_secs'] > 90]
     display_details(large_blocks)
-    # TODO: create zip file of all blocks
+
     print("\n========================================================================")
     print("GLIDE PERFORMANCE ANALYSIS")
     display_glide_analysis(s)
-    print("\n========================================================================")
-    print("THERMAL ANALYSIS")
-    display_thermal_analysis(s)
+
+    if s['flight_type'] != 'soaring':
+        print("\n========================================================================")
+        print("THERMAL ANALYSIS")
+        display_thermal_analysis(s)
+
     # TODO: validate kmz file creator
+    kmz_data = {
+        "pilot": s['pilot'],
+        "filename": s['filename'][:-4],
+        "takeoff_gps": s['takeoff_gps'],
+        "landing_gps": s['landing_gps'],
+        "lon_lat_alt_list": s.get('lon_lat_alt_list', []),
+        "details": s['details']
+    }
+    # create_kmz(kmz_data)
 
 
 def display_details(details):
@@ -639,23 +710,9 @@ def calculate_thermal_stats(thermal_blocks, all_blocks):
     }
 
 
-def calculate_thermal_centering(thermal_blocks):
-    centering_scores = []
-    for block in thermal_blocks:
-        if block['time_secs'] >= 30:
-            strength = block['avg_lift_sink_ms']
-            duration = block['time_secs']
-            if strength > 0:
-                centering_scores.append(strength)
-    if centering_scores:
-        return round(stat.mean(centering_scores), 2)
-    return 0
-
-
 def analyze_thermals(blocks, all_blocks):
     circling_blocks = detect_circling(blocks)
     stats = calculate_thermal_stats(circling_blocks, all_blocks)
-    stats['avg_centering_score'] = calculate_thermal_centering(circling_blocks)
     stats['circling_blocks'] = circling_blocks
     return stats
 
@@ -669,30 +726,20 @@ def display_thermal_analysis(s):
         input()
         return
 
-    print(
-        f"  Average Thermal Strength: {thermals['avg_thermal_strength']} m/s || {msToFpm(thermals['avg_thermal_strength'])} fpm")
-    print(
-        f"  Max Thermal Strength: {thermals['max_thermal_strength']} m/s || {msToFpm(thermals['max_thermal_strength'])} fpm")
-    print(
-        f"  Min Thermal Strength: {thermals['min_thermal_strength']} m/s || {msToFpm(thermals['min_thermal_strength'])} fpm")
+    print(f"  Average Thermal Strength: {thermals['avg_thermal_strength']} m/s || {msToFpm(thermals['avg_thermal_strength'])} fpm")
+    print(f"  Max Thermal Strength: {thermals['max_thermal_strength']} m/s || {msToFpm(thermals['max_thermal_strength'])} fpm")
+    print(f"  Min Thermal Strength: {thermals['min_thermal_strength']} m/s || {msToFpm(thermals['min_thermal_strength'])} fpm")
     print(f"  Average Thermal Duration: {thermals['avg_thermal_duration']} seconds")
-    print(
-        f"  Total Time in Thermals: {thermals['total_thermal_time']} seconds ({thermals['thermal_time_pct']}% of flight)")
-    print(
-        f"  Average Altitude Gain per Thermal: {thermals['avg_alt_gain']} m || {meters_to_feet(thermals['avg_alt_gain'])} ft")
-    print(
-        f"  Total Altitude Gained in Thermals: {thermals['total_alt_gain']} m || {meters_to_feet(thermals['total_alt_gain'])} ft")
-    print(f"  Average Centering Score: {thermals['avg_centering_score']} m/s")
-    # TODO: What is this ^?
+    print(f"  Total Time in Thermals: {thermals['total_thermal_time']} seconds ({thermals['thermal_time_pct']}% of flight)")
+    print(f"  Average Altitude Gain per Thermal: {thermals['avg_alt_gain']} m || {meters_to_feet(thermals['avg_alt_gain'])} ft")
+    print(f"  Total Altitude Gained in Thermals: {thermals['total_alt_gain']} m || {meters_to_feet(thermals['total_alt_gain'])} ft")
 
     for i, thermal in enumerate(thermals['circling_blocks'], 1):
         alt_gain = thermal['altitude_end_m'] - thermal['altitude_start_m']
         print(f"\n  Thermal #{i}:")
-        print(
-            f"    Duration: {thermal['time_secs']}s | Strength: {thermal['avg_lift_sink_ms']} m/s ({msToFpm(thermal['avg_lift_sink_ms'])} fpm)")
+        print(f"    Duration: {thermal['time_secs']}s | Strength: {thermal['avg_lift_sink_ms']} m/s ({msToFpm(thermal['avg_lift_sink_ms'])} fpm)")
         print(f"    Altitude: {thermal['altitude_start_m']} m -> {thermal['altitude_end_m']} m (gain: {alt_gain}m)")
-        print(
-            f"              {meters_to_feet(thermal['altitude_start_m'])} ft -> {meters_to_feet(thermal['altitude_end_m'])} ft (gain: {meters_to_feet(alt_gain)} ft)")
+        print(f"              {meters_to_feet(thermal['altitude_start_m'])} ft -> {meters_to_feet(thermal['altitude_end_m'])} ft (gain: {meters_to_feet(alt_gain)} ft)")
         print(f"    Location: {thermal['loc_start']}")
 
 
@@ -716,7 +763,7 @@ def analyze_glide_performance(blocks, glider_type=None):
         alt_loss = block['altitude_start_m'] - block['altitude_end_m']
         distance = block['total_distance_m']
         if alt_loss > 10 and distance > 50:
-            l_d = round(distance / alt_loss, 2) if alt_loss > 0 else 0
+            l_d = round(distance / alt_loss, 2) if alt_loss > 0 else 0  # L/D Calc Here
             avg_alt = (block['altitude_start_m'] + block['altitude_end_m']) / 2
             sink_rate = abs(block['avg_lift_sink_ms'])
             glide_data.append({
@@ -758,7 +805,7 @@ def analyze_glide_performance(blocks, glider_type=None):
     else:
         avg_climb = 1.0
 
-    macready = round(avg_sink / (1 + 1 / avg_ld), 2) if avg_ld > 0 else 0
+    macready = round(avg_climb, 2)
 
     glide_polar = sorted(glide_data, key=lambda x: x['sink_rate'])
 
@@ -802,10 +849,15 @@ def display_glide_analysis(s):
 
     print(f"\n  SPEED-TO-FLY (MacReady):")
     print(f"    Optimal MacReady Setting: {stats['macready_optimal']} m/s || {msToFpm(stats['macready_optimal'])} fpm")
+
+    if s['duration'] > 3600:
+        hours = s['duration'] / 3600
+        avg_kph = round(s['total_distance'] / hours, 1)
+        avg_mph = round(km_to_miles(avg_kph), 1)
+        print(f"    Average Speed: {avg_kph} km/h || {avg_mph} mph")
+
     print(f"    Average Climb Rate: {stats['avg_climb_rate']} m/s || {msToFpm(stats['avg_climb_rate'])} fpm")
     print(f"    Cruise Efficiency: {stats['cruise_efficiency']}%")
-    # TODO: Verify Macready calc
-    # TODO: Add speed to fly avg KPH/MPH
 
     print(f"\n  INTERPRETATION:")
     if stats['cruise_efficiency'] > 90:
@@ -826,8 +878,15 @@ def display_glide_analysis(s):
     print("-" * 40)
     print(f"  {'Sink (m/s)':<12} {'L/D':<8} {'Alt (m)':<10}")
     print("-" * 40)
-    for g in stats['glide_polar']:
-        print(f"  {g['sink_rate']:<12.2f} {g['l_d']:<8.2f} {int(g['altitude']):<10}")
+    shown = set()
+    for target in range(5, 16):
+        best = min(stats['glide_polar'], key=lambda g: abs(g['l_d'] - target))
+        key = (best['sink_rate'], best['l_d'], best['altitude'])
+        if key not in shown:
+            shown.add(key)
+            print(f"  {best['sink_rate']:<12.2f} {best['l_d']:<8.2f} {int(best['altitude']):<10}")
+        if len(shown) >= 10:
+            break
 
 
 def analyze_file(igc_file):
@@ -836,21 +895,21 @@ def analyze_file(igc_file):
     #       Flight Analyzer
     # Results returns some analysis + chunk data
     results = load_igc(igc_file)
-    # print(results)
+    # print(results['details'])  # all blocks
 
     # Step 2: Remaining Stats
     #       D display all blocks over 90 secs
     #       P Performance analysis
     #       T Thermal analysis
-    #       A zip all blocks
+    #       ON HOLD: A zip all blocks
     #       K KML export
     display_summary_stats(results)
-
-# TODO: Debug glide ratio calculation
 
 
 if __name__ == '__main__':
     # Specify the file
-    # igc_file = '35k_example.igc'
-    igc_file = 'SB-HSB.igc'
+    # igc_file = 'tst-thermal.igc'
+    # igc_file = 'tst-xc1.igc'
+    igc_file = 'tst-xc2.igc'
+    # igc_file = 'tst-ridge.igc'
     analyze_file(igc_file)
