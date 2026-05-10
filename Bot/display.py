@@ -226,14 +226,3 @@ def display_summary_stats(s):
         print("\n========================================================================")
         print("THERMAL ANALYSIS")
         display_thermal_analysis(s)
-
-    # TODO: validate kmz file creator
-    kmz_data = {
-        "pilot": s['pilot'],
-        "filename": s['filename'][:-4],
-        "takeoff_gps": s['takeoff_gps'],
-        "landing_gps": s['landing_gps'],
-        "lon_lat_alt_list": s.get('lon_lat_alt_list', []),
-        "details": s['details']
-    }
-    # create_kmz(kmz_data)

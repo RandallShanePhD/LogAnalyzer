@@ -2,7 +2,8 @@
 import statistics as stat
 
 from base import settings
-from base import convert_hm_to_dt, convert_meters_to_feet, convert_km_to_miles, convert_ms_to_fpm, format_timestamp, haversine, bearing
+from base import convert_hm_to_dt, convert_meters_to_feet, convert_km_to_miles, convert_ms_to_fpm, format_timestamp, \
+    haversine, bearing
 
 
 # Reference Functions ---------------------------------------------------------------------------|
@@ -57,7 +58,7 @@ def calculate_climb_efficiency(altis, global_avg_climb, averaging_factor):
 
 
 # Detection & specific analysis mechanisms  --------------------------------------------------------------------|
-def detect_circling(blocks, min_turns=2, min_duration=20, min_alt_gain=50):
+def detect_circling(blocks, min_turns=2, min_duration=20, min_alt_gain=50, max_drift_m=1000):
     circling_blocks = []
     for block in blocks:
         if block['tyype'] == 'Climb' and block['time_secs'] >= min_duration:
@@ -66,7 +67,7 @@ def detect_circling(blocks, min_turns=2, min_duration=20, min_alt_gain=50):
                 start_loc = block['loc_start']
                 end_loc = block['loc_end']
                 distance = haversine(start_loc, end_loc) * 1000
-                if distance < 500:
+                if distance < max_drift_m:
                     circling_blocks.append(block)
     return circling_blocks
 
@@ -268,16 +269,17 @@ def load_igc(in_igc_file):
         elif line[0] == "B":  # data lines start with 'B'
             raw_time = line[1:7]
 
-            lat = float(line[7:14]) / 100000
+            lat_raw = line[7:14]
+            lat = int(lat_raw[:2]) + float(lat_raw[2:]) / 60000
             ns = line[14]
             if ns == "S":
                 lat = lat * -1
 
-            lon = float(line[15:23]) / 100000
+            lon_raw = line[15:23]
+            lon = int(lon_raw[:3]) + float(lon_raw[3:]) / 60000
             ew = line[23]
             if ew == "W":
                 lon = lon * -1
-
 
             # total distance
             travelled = haversine((last_lat, last_lon), (lat, lon))
@@ -319,7 +321,7 @@ def load_igc(in_igc_file):
                 if fa_dist > flight_area_km:
                     flight_area_km = fa_dist
 
-            # List for kmz path
+            # List for kml path
             lon_lat_alt_list.append((lon, lat, alt_m))
 
             # Climb & Sink with averaging
@@ -349,7 +351,10 @@ def load_igc(in_igc_file):
                 high_alt_m = alt_m
             last_alt = alt_m
 
+    # Final calcs & vars
     takeoff_to_land_dist = haversine((takeoff_lat, takeoff_lon), (last_lat, last_lon))
+    takeoff_gps = (round(takeoff_lat, 5), round(takeoff_lon, 5))
+    landing_gps = (round(last_lat, 5), round(last_lon, 5))
 
     # Landing Determination
     landing_dt = convert_hm_to_dt(raw_utc_date, raw_time)
@@ -376,6 +381,15 @@ def load_igc(in_igc_file):
     model_data["takeoff_to_landing"] = takeoff_to_land_dist
     model_data["flight_area"] = flight_area_km
 
+    # kml File Data
+    kml_data = {"pilot": pilot,
+                "filename": in_igc_file,
+                "takeoff_gps": takeoff_gps,
+                "landing_gps": landing_gps,
+                "lon_lat_alt_list": lon_lat_alt_list,
+                "details": analysis['details']}
+    # create_kml(kml_data)
+
     return {"filename": in_igc_file,
             "pilot": pilot,
             "vario": vario,
@@ -386,11 +400,11 @@ def load_igc(in_igc_file):
             "max_sink": high_sink_m,
             "takeoff_datetime": format_timestamp(takeoff_dt),
             "takeoff_alt": takeoff_alt_m,
-            "takeoff_gps": (round(takeoff_lat, 6), round(takeoff_lon, 6)),
+            "takeoff_gps": takeoff_gps,
             "takeoff_heading": takeoff_heading,
             "landing_datetime": format_timestamp(landing_dt),
             "landing_alt": landing_alt_m,
-            "landing_gps": (round(last_lat, 6), round(last_lon, 6)),
+            "landing_gps": landing_gps,
             "landing_heading": landing_heading,
             "total_distance": round(total_distance_km, 1),
             "takeoff_to_land_dist": round(takeoff_to_land_dist, 1),
@@ -410,9 +424,10 @@ def load_igc(in_igc_file):
             "µ_sustained_glide": analysis["µ_sustained_glide"],
             "model_data": model_data,
             "lon_lat_alt_list": lon_lat_alt_list,
-            # Glide & Thermal Analysis
+            # Glide, Thermal & kml Data
             "glide_perf": glide_perf,
-            "thermals": thermals}
+            "thermals": thermals,
+            "kml_data": kml_data}
 
 
 def flight_analyzer(analysis_data, flight_area_km=0.0):
@@ -430,13 +445,10 @@ def flight_analyzer(analysis_data, flight_area_km=0.0):
     temp = []
     for i, line in enumerate(analysis_data):
         # (datetime, lat, lon, alt_m, heading, distance)
-        if i > 0:
-            if i % settings["averaging_factor"] == 0 and i > 0:
-                chunks.append(temp)
-                temp = []
-                temp.append(line)
-            else:
-                temp.append(line)
+        if i > 0 and i % settings["averaging_factor"] == 0:
+            chunks.append(temp)
+            temp = []
+        temp.append(line)
 
     # Step 2: Analyze for Climb, GLide or Sink
     for chunk in chunks:
@@ -454,17 +466,23 @@ def flight_analyzer(analysis_data, flight_area_km=0.0):
     # Step 3: Consolidate contiguous types
     # chunks[i]: (datetime, lat, lon, alt_m, heading, distance)
     # chunk_cat[i]: (category, avg_ls)
-    temp = []
-    for i in range(len(chunk_cat)):
-        if i > 0:
-            if chunk_cat[i] == chunk_cat[i - 1]:
-                temp = temp + chunks[i]
-            else:
-                # temp.sort(key=lambda x: x[0])
-                blocks.append(temp)
-                avg_ls = calc_lift_sink([x[3] for x in temp])
-                blocks_cat.append((chunk_cat[i - 1], avg_ls))
-                temp = chunks[i]
+    if not chunks:
+        chunks = []
+    temp = chunks[0] if chunks else []
+    for i in range(1, len(chunk_cat)):
+        if chunk_cat[i] == chunk_cat[i - 1]:
+            temp = temp + chunks[i]
+        else:
+            # temp.sort(key=lambda x: x[0])
+            blocks.append(temp)
+            avg_ls = calc_lift_sink([x[3] for x in temp])
+            blocks_cat.append((chunk_cat[i - 1], avg_ls))
+            temp = chunks[i]
+
+    if temp:
+        blocks.append(temp)
+        avg_ls = calc_lift_sink([x[3] for x in temp])
+        blocks_cat.append((chunk_cat[-1], avg_ls))
 
     # Step 4: Analysis
     climbing_grades = []
@@ -521,6 +539,12 @@ def flight_analyzer(analysis_data, flight_area_km=0.0):
             block_detail["altitude_start_m"] = block[0][3]
             block_detail["altitude_end_m"] = block[-1][3]
             block_detail["avg_lift_sink_ms"] = blocks_cat[i][1]
+            if blocks_cat[i][0] == "G":
+                lift = abs(block[-1][3] - block[0][3])
+                if lift == 0:
+                    lift = 1
+                distance = round(sum(x[5] for x in block) * 1000)
+                block_detail["l_over_d"] = round(distance / lift, 2)
             block_detail["loc_start"] = (block[0][1], block[0][2])
             block_detail["loc_end"] = (block[-1][1], block[-1][2])
             block_detail["total_distance_m"] = round(sum(x[5] for x in block) * 1000)
@@ -589,12 +613,6 @@ def flight_analyzer(analysis_data, flight_area_km=0.0):
     return analysis_data
 
 
-# TODO: FINISH THIS PART
-# def create_kmz(kmz_data):
-#     from kmz_creator import create_enhanced_kmz
-#     create_enhanced_kmz(kmz_data)
-
-
 def analyze_file(igc_file):
     # Load & Analyze the file
     results = load_igc(igc_file)
@@ -603,11 +621,13 @@ def analyze_file(igc_file):
     from display import display_summary_stats
     display_summary_stats(results)
 
+    # OPTION: Create kml File
+    from kmls import create_enhanced_kml
+    kml_result = create_enhanced_kml(results['kml_data'])
+    print("\n", kml_result)
+
 
 if __name__ == '__main__':
     # Specify the file
-    # igc_file = 'tst-thermal.igc'
-    # igc_file = 'tst-xc1.igc'
-    igc_file = 'tst-xc2.igc'
-    # igc_file = 'tst-ridge.igc'
+    igc_file = 'Annecy_Triangle.igc'
     analyze_file(igc_file)
