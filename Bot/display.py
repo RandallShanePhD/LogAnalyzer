@@ -166,7 +166,7 @@ def display_summary_stats(s):
     formatted_duration = str(dt.timedelta(seconds=s["duration"]))
 
     print("\nFLIGHT:")
-    print(f"  File: {s['filename']}")
+    print(f"  File: {s['filename'].split('/')[-1]}")
     print(f"  Pilot: {s['pilot']}")
     print(f"  Glider: {s['glider']}")
     print(f"  Vario: {s['vario']}")

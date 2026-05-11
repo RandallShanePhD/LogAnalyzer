@@ -6,6 +6,9 @@ from base import convert_hm_to_dt, convert_meters_to_feet, convert_km_to_miles, 
     haversine, bearing
 
 
+MAX_GLIDE_RATIO = 20
+
+
 # Reference Functions ---------------------------------------------------------------------------|
 def calc_lift_sink(altitudes: [float]) -> float:
     value = 0
@@ -138,6 +141,8 @@ def analyze_glide_performance(blocks, glider_type=None):
         distance = block['total_distance_m']
         if alt_loss > 10 and distance > 50:
             l_d = round(distance / alt_loss, 2) if alt_loss > 0 else 0  # L/D Calc Here
+            if l_d > MAX_GLIDE_RATIO:
+                continue
             avg_alt = (block['altitude_start_m'] + block['altitude_end_m']) / 2
             sink_rate = abs(block['avg_lift_sink_ms'])
             glide_data.append({
@@ -521,7 +526,8 @@ def flight_analyzer(analysis_data, flight_area_km=0.0):
                     lift = 1
                 distance = round(sum(x[5] for x in block) * 1000)
                 l_over_d = round(distance / lift, 2)
-                gliding_grades.append(l_over_d)
+                if l_over_d <= MAX_GLIDE_RATIO:
+                    gliding_grades.append(l_over_d)
             elif tyype == "S":  # record abs of sink rate
                 sink_rate = abs(blocks_cat[i][1])
                 sinking_grades.append(sink_rate)
@@ -544,7 +550,8 @@ def flight_analyzer(analysis_data, flight_area_km=0.0):
                 if lift == 0:
                     lift = 1
                 distance = round(sum(x[5] for x in block) * 1000)
-                block_detail["l_over_d"] = round(distance / lift, 2)
+                l_over_d = round(distance / lift, 2)
+                block_detail["l_over_d"] = l_over_d if l_over_d <= MAX_GLIDE_RATIO else 0
             block_detail["loc_start"] = (block[0][1], block[0][2])
             block_detail["loc_end"] = (block[-1][1], block[-1][2])
             block_detail["total_distance_m"] = round(sum(x[5] for x in block) * 1000)
@@ -618,8 +625,8 @@ def analyze_file(igc_file):
     results = load_igc(igc_file)
 
     # OPTION: CLI Display
-    from display import display_summary_stats
-    display_summary_stats(results)
+    # from display import display_summary_stats
+    # display_summary_stats(results)
 
     # OPTION: Create kml File
     from kmls import create_enhanced_kml
@@ -627,7 +634,7 @@ def analyze_file(igc_file):
     print("\n", kml_result)
 
 
-if __name__ == '__main__':
-    # Specify the file
-    igc_file = 'Annecy_Triangle.igc'
-    analyze_file(igc_file)
+# if __name__ == '__main__':
+#     # Specify the file
+#     igc_file = 'Annecy_Triangle.igc'
+#     analyze_file(igc_file)
