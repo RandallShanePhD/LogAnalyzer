@@ -627,11 +627,6 @@ def analyze_file(igc_file):
     from kmls import create_enhanced_kml
     kml_result = create_enhanced_kml(results['kml_data'])
 
-    # End Email/Analysis Text
-    print("\n\nAnalysis Complete - KML file for Google Earth attached.")
-    print("Thanks for using the WanderBot IGC analyzer.")
-    print("\n\tBlue skies!!\n\tWander Expeditions LLC")
-
 
 # if __name__ == '__main__':
 #     # Specify the file

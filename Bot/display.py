@@ -50,7 +50,7 @@ def display_details(details):
     for detail in details:
         altitude_change = detail['altitude_end_m'] - detail['altitude_start_m']
         print(
-            f" Block Number: {detail['number']}   Block Type: {detail['tyype']}   Time in Secs: {detail['time_secs']}")
+            f"\n Block Number: {detail['number']}   Block Type: {detail['tyype']}   Time in Secs: {detail['time_secs']}")
         print(
             f"  Altitude Start: {detail['altitude_start_m']}m | {convert_meters_to_feet(detail['altitude_start_m'])}ft   End: {detail['altitude_end_m']}m | {convert_meters_to_feet(detail['altitude_end_m'])}ft")
         print(
@@ -59,10 +59,10 @@ def display_details(details):
         distance = round(haversine(detail['loc_start'], detail['loc_end']) * 1000)
         print(
             f"  Distance Start-End: {distance}m | {convert_meters_to_feet(distance)}ft   Distance Total: {detail['total_distance_m']}m | {convert_meters_to_feet(detail['total_distance_m'])}ft")
-        print("\n")
 
 
 def display_glide_analysis(s):
+    print("GLIDE PERFORMANCE ANALYSIS:")
     stats = s["glide_perf"]
     print(f"  Segments Analyzed: {stats['glide_count']}")
     if stats['glide_count'] == 0:
@@ -206,20 +206,25 @@ def display_summary_stats(s):
         s['sinks_num'] / (s['climbs_num'] + s['glides_num'] + s['sinks_num']) * 100, 2)
     print(f"  You are sinking {sink_ratio}% of the flight")
     print("\n\n")
-    print(f"EFFICIENCY GRADE ({s.get('flight_type', 'thermal').upper()}): {s['climb_grade']}%")
+    print(f"EFFICIENCY GRADE:")
+    print(f"  ({s.get('flight_type', 'thermal').upper()}): {s['climb_grade']}%")
     narative = efficiency_grade_lookup(s['climb_grade'], s.get('flight_type', 'thermal'))
     print(f"\t{narative}")
     print("\n\n")
 
-    print("DETAILED FLIGHT INSPECTION OF BLOCKS OVER 90 SECONDS LONG")
-    print("  (all blocks zipped and attached)\n")
+    print("DETAILED FLIGHT INSPECTION OF BLOCKS OVER 90 SECONDS LONG:")
+    print(f"\tBlocks in Flight: {len(s['details'])}\n")
     large_blocks = [x for x in s["details"] if x['time_secs'] > 90]
     display_details(large_blocks)
 
     print("\n\n")
-    print("GLIDE PERFORMANCE ANALYSIS")
     display_glide_analysis(s)
 
     if s['flight_type'] != 'soaring':
         print("\n\n")
         display_thermal_analysis(s)
+
+    # End Email/Analysis Text
+    print("\n\nAnalysis Complete - KML file for Google Earth attached.")
+    print("Thanks for using the WanderBot IGC analyzer.")
+    print("\n\tBlue skies!!\n\tWander Expeditions LLC\n\n")
