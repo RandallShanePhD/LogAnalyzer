@@ -633,7 +633,7 @@ def analyze_file(igc_file):
     print("\n\tBlue skies!!\n\tWander Expeditions LLC")
 
 
-if __name__ == '__main__':
-    # Specify the file
-    igc_file = 'SB-HSB.igc'
-    analyze_file(igc_file)
+# if __name__ == '__main__':
+#     # Specify the file
+#     igc_file = 'SB-HSB.igc'
+#     analyze_file(igc_file)
