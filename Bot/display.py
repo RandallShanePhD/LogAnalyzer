@@ -169,7 +169,7 @@ def display_summary_stats(s):
     print(f"  Vario: {s['vario']}")
     print("\n\n")
     print("STATISTICS:")
-    print(f"  Flight Type: {s['flight_type']}.upper()")
+    print(f"  Flight Type: {s['flight_type'].upper()}")
     print(f"  Date: {formatted_date}")
     print(f"  Duration: {formatted_duration}")
     print(f"  Takeoff GPS: {s['takeoff_gps']}")
