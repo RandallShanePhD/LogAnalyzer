@@ -59,7 +59,7 @@ def display_details(details):
         distance = round(haversine(detail['loc_start'], detail['loc_end']) * 1000)
         print(
             f"  Distance Start-End: {distance}m | {convert_meters_to_feet(distance)}ft   Distance Total: {detail['total_distance_m']}m | {convert_meters_to_feet(detail['total_distance_m'])}ft")
-        print(" - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -")
+        print("\n")
 
 
 def display_glide_analysis(s):
@@ -103,12 +103,10 @@ def display_glide_analysis(s):
     else:
         print(f"    Consider optimizing cruise speed for conditions")
 
-    print("\n" + "-" * 60)
-    print("Top 5 Glides by L/D:")
-    print("-" * 60)
+    print("\tTop 5 Glides by L/D:")
     for i, g in enumerate(stats['glide_blocks'][:5], 1):
         print(
-            f"  #{i}: L/D {g['l_d']}:1 | Alt {int(g['altitude'])}m | Sink {g['sink_rate']} m/s | Dist {int(g['distance'])}m")
+            f"\t  #{i}: L/D {g['l_d']}:1 | Alt {int(g['altitude'])}m | Sink {g['sink_rate']} m/s | Dist {int(g['distance'])}m")
 
     print("\nPolar Glide Curve (sink rate vs glide ratio):")
     print("-" * 40)
@@ -126,12 +124,11 @@ def display_glide_analysis(s):
 
 
 def display_thermal_analysis(s):
+    print("THERMAL ANALYSIS:")
     thermals = s["thermals"]
-    print(f"\n  Thermal Count: {thermals['thermal_count']}")
+    print(f"  Thermal Count: {thermals['thermal_count']}")
     if thermals['thermal_count'] == 0:
         print("  No thermals detected (no circling behavior found)")
-        print("\n  return to continue")
-        input()
         return
 
     print(f"  Average Thermal Strength: {thermals['avg_thermal_strength']} m/s || {convert_ms_to_fpm(thermals['avg_thermal_strength'])} fpm")
@@ -170,11 +167,11 @@ def display_summary_stats(s):
     print(f"  Pilot: {s['pilot']}")
     print(f"  Glider: {s['glider']}")
     print(f"  Vario: {s['vario']}")
-    print("\n========================================================================")
+    print("\n\n")
     print("STATISTICS:")
+    print(f"  Flight Type: {s['flight_type']}.upper()")
     print(f"  Date: {formatted_date}")
     print(f"  Duration: {formatted_duration}")
-    print(f"  Flight Type: {s['flight_type']}")
     print(f"  Takeoff GPS: {s['takeoff_gps']}")
     print(f"  Takeoff DateTime: {s['takeoff_datetime']}")
     print(f"  Takeoff Altitude: {s['takeoff_alt']} m || {convert_meters_to_feet(s['takeoff_alt'])} ft")
@@ -189,7 +186,7 @@ def display_summary_stats(s):
     print(f"  Max Altitude: {s['max_alt']} m || {convert_meters_to_feet(s['max_alt'])} ft")
     print(f"  Max Lift: {s['max_lift']} m/s || {convert_ms_to_fpm(s['max_lift'])} ft/min")
     print(f"  Max Sink: {s['max_sink']} m/s || {convert_ms_to_fpm(s['max_sink'])} ft/min")
-    print("\n========================================================================")
+    print("\n\n")
     print("OVERVIEW:")
     print(f"  Climbs - Number of Climbs: {s['climbs_num']}")
     print(f"  Climbs - Max Sustained m/s: {s['max_sustained_climb']} || {convert_ms_to_fpm(s['max_sustained_climb'])} fpm")
@@ -208,21 +205,21 @@ def display_summary_stats(s):
     sink_ratio = round(
         s['sinks_num'] / (s['climbs_num'] + s['glides_num'] + s['sinks_num']) * 100, 2)
     print(f"  You are sinking {sink_ratio}% of the flight")
-    print("\n========================================================================\nFLIGHT TYPE: " + s.get('flight_type', 'thermal').upper())
+    print("\n\n")
     print(f"EFFICIENCY GRADE ({s.get('flight_type', 'thermal').upper()}): {s['climb_grade']}%")
     narative = efficiency_grade_lookup(s['climb_grade'], s.get('flight_type', 'thermal'))
     print(f"\t{narative}")
-    print("\n========================================================================")
+    print("\n\n")
+
     print("DETAILED FLIGHT INSPECTION OF BLOCKS OVER 90 SECONDS LONG")
     print("  (all blocks zipped and attached)\n")
     large_blocks = [x for x in s["details"] if x['time_secs'] > 90]
     display_details(large_blocks)
 
-    print("\n========================================================================")
+    print("\n\n")
     print("GLIDE PERFORMANCE ANALYSIS")
     display_glide_analysis(s)
 
     if s['flight_type'] != 'soaring':
-        print("\n========================================================================")
-        print("THERMAL ANALYSIS")
+        print("\n\n")
         display_thermal_analysis(s)

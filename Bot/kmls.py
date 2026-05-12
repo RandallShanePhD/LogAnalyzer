@@ -65,11 +65,8 @@ def detect_turnpoints(details):
 
 # Core Functions -----------------------------------------------------|
 def create_enhanced_kml(kml_data):
-    msg = "Working on enhanced kml file!"
     try:
         out_file = f"{kml_data['filename'].split('.')[0]}.kml"
-        # if not os.path.exists("kmls"):
-        #     os.makedirs("kmls")
         if os.path.exists(out_file):
             os.remove(out_file)
 
@@ -260,9 +257,5 @@ def create_enhanced_kml(kml_data):
         f.write('</Document>\n')
         f.write('</kml>\n')
         f.close()
-
-        msg = f"  Enhanced kml saved to: {out_file}"
     except Exception as e:
-        msg = f"  Error creating kml: {e}"
-    finally:
-        return msg
+        return

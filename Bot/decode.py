@@ -393,7 +393,6 @@ def load_igc(in_igc_file):
                 "landing_gps": landing_gps,
                 "lon_lat_alt_list": lon_lat_alt_list,
                 "details": analysis['details']}
-    # create_kml(kml_data)
 
     return {"filename": in_igc_file,
             "pilot": pilot,
@@ -613,10 +612,6 @@ def flight_analyzer(analysis_data, flight_area_km=0.0):
                      "flight_type": flight_type,
                      "details": details}
 
-    # Save Add on Files
-    # HOLD: Write 'all blocks' file & save somewhere
-    # all_blocks = details
-
     return analysis_data
 
 
@@ -625,16 +620,20 @@ def analyze_file(igc_file):
     results = load_igc(igc_file)
 
     # OPTION: CLI Display
-    # from display import display_summary_stats
-    # display_summary_stats(results)
+    from display import display_summary_stats
+    display_summary_stats(results)
 
     # OPTION: Create kml File
     from kmls import create_enhanced_kml
     kml_result = create_enhanced_kml(results['kml_data'])
-    print("\n", kml_result)
+
+    # End Email/Analysis Text
+    print("\n\nAnalysis Complete - KML file for Google Earth attached.")
+    print("Thanks for using the WanderBot IGC analyzer.")
+    print("\n\tBlue skies!!\n\tWander Expeditions LLC")
 
 
-# if __name__ == '__main__':
-#     # Specify the file
-#     igc_file = 'Annecy_Triangle.igc'
-#     analyze_file(igc_file)
+if __name__ == '__main__':
+    # Specify the file
+    igc_file = 'SB-HSB.igc'
+    analyze_file(igc_file)
