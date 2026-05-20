@@ -206,16 +206,11 @@ def display_summary_stats(s):
         s['sinks_num'] / (s['climbs_num'] + s['glides_num'] + s['sinks_num']) * 100, 2)
     print(f"  You are sinking {sink_ratio}% of the flight")
     print("\n\n")
+
     print(f"EFFICIENCY GRADE:")
     print(f"  ({s.get('flight_type', 'thermal').upper()}): {s['climb_grade']}%")
     narative = efficiency_grade_lookup(s['climb_grade'], s.get('flight_type', 'thermal'))
     print(f"\t{narative}")
-    print("\n\n")
-
-    print("DETAILED FLIGHT INSPECTION OF BLOCKS OVER 90 SECONDS LONG:")
-    print(f"\tBlocks in Flight: {len(s['details'])}\n")
-    large_blocks = [x for x in s["details"] if x['time_secs'] > 90]
-    display_details(large_blocks)
 
     print("\n\n")
     display_glide_analysis(s)
@@ -224,6 +219,13 @@ def display_summary_stats(s):
         print("\n\n")
         display_thermal_analysis(s)
 
+    print("\n\n")
+    print("DETAILED FLIGHT INSPECTION OF BLOCKS OVER 90 SECONDS LONG:")
+    print(f"\tBlocks in Flight: {len(s['details'])}\n")
+    large_blocks = [x for x in s["details"] if x['time_secs'] > 90]
+    display_details(large_blocks)
+
+    print("\n\n")
     # End Email/Analysis Text
     print("\n\nAnalysis Complete - KML file for Google Earth attached.")
     print("Thanks for using the WanderBot IGC analyzer.")

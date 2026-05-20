@@ -140,7 +140,7 @@ def create_enhanced_kml(kml_data):
                         color = "glide_green"
             coordinates.append((coord[0], coord[1], coord[2], color))
 
-        f = open(out_file, "a")
+        f = open(out_file, "w", encoding="utf-8")
         f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
         f.write('<kml xmlns="http://www.opengis.net/kml/2.2"\n')
         f.write('     xmlns:gx="http://www.google.com/kml/ext/2.2">\n')
