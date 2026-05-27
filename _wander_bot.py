@@ -220,3 +220,4 @@ def poll_forever():
 if __name__ == "__main__":
     poll_forever()
 
+# RUN: nohup python3 _wander_bot.py &
