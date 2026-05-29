@@ -136,8 +136,8 @@ altitudes = 44330.0 * (1.0 - (p_vals / 1013.25) ** (1.0 / 5.255))
 full_altitudes = altitudes.copy()
 surface_level_idx = np.argmin(np.abs(full_altitudes - ground_m)) if ground_m > 0 else 0
 
-# Filter levels from ground to ~4000m
-valid_idx = np.where((altitudes >= ground_m) & (altitudes <= 4200))[0]
+# Filter levels from ground up to 4500m
+valid_idx = np.where((altitudes >= ground_m) & (altitudes <= 4500))[0]
 # Ensure ascending altitude order (NCSS may return levels high-to-low)
 if len(valid_idx) > 1 and altitudes[valid_idx[0]] > altitudes[valid_idx[-1]]:
     valid_idx = valid_idx[::-1]
@@ -145,6 +145,7 @@ altitudes = altitudes[valid_idx]
 wind_speed = wind_speed[:, valid_idx]
 u_mph = u_mph[:, valid_idx]
 v_mph = v_mph[:, valid_idx]
+y_top = min(altitudes[-1] + 300, 4500)
 
 # Use the lowest above-ground model level as the surface for ceiling calc
 if len(valid_idx) > 0:
@@ -284,8 +285,8 @@ ax.set_xlim(9.5, 22.5)
 ax.set_xticks(range(10, 23))
 ax.set_xticklabels([f"{h:02d}:00" for h in range(10, 23)], fontsize=8, fontweight='bold')
 
-ax.set_ylim(ground_m, 4100)
-y_ticks = list(range(int(ground_m), 4100, 500))
+ax.set_ylim(ground_m, y_top)
+y_ticks = list(range(int(ground_m), int(y_top), 500))
 if ground_m > 0 and int(ground_m) not in y_ticks:
     y_ticks.insert(0, int(ground_m))
 ax.set_yticks(y_ticks)
@@ -293,9 +294,9 @@ ax.set_ylabel(f"Altitude (m) — ground: {int(ground_ft)}ft", fontsize=12, fontw
 
 # Secondary y-axis for feet
 ax2 = ax.twinx()
-ax2.set_ylim(ground_m, 4100)
+ax2.set_ylim(ground_m, y_top)
 ft_min = int(ground_ft / 500) * 500 + 500
-ft_ticks = range(ft_min, int(4100 * 3.28084), 500)
+ft_ticks = range(ft_min, int(y_top * 3.28084), 500)
 ax2.set_yticks([t / 3.28084 for t in ft_ticks])
 ax2.set_yticklabels(ft_ticks, fontsize=10)
 ax2.set_ylabel("Altitude (ft)", fontsize=12, fontweight='bold')
@@ -309,15 +310,15 @@ ax.grid(False)
 for ti, hr in enumerate(hour_positions):
     mi = time_idx[ti]
     cb = ceiling_per_hour[mi]
-    if cb < 4100:
+    if cb < y_top:
         ax.plot([hr - 0.45, hr + 0.45], [cb, cb],
                 color='#4a6a9a', linewidth=1.5, linestyle='--', zorder=5)
         ax.plot([hr, hr], [cb, cb + 60],
                 color='#4a6a9a', linewidth=1.0, linestyle=':', zorder=5)
 
-# Colorbar — horizontal above the chart
-fig.subplots_adjust(top=0.84)
-cbar_ax = fig.add_axes([0.12, 0.91, 0.76, 0.03])
+# Colorbar — horizontal below title/subtitle
+fig.subplots_adjust(top=0.75)
+cbar_ax = fig.add_axes([0.12, 0.85, 0.76, 0.03])
 sm = plt.cm.ScalarMappable(cmap=THERMAL_CMAP, norm=mcolors.Normalize(vmin=0, vmax=LR_MAX))
 sm.set_array([])
 cbar = plt.colorbar(sm, cax=cbar_ax, orientation='horizontal')
@@ -325,7 +326,11 @@ cbar.set_label('Thermal Lift Strength (lapse rate ratio)', fontsize=9, fontweigh
 cbar.set_ticks([0, 1, 2, 3, 4, 5, 6])
 cbar.ax.tick_params(labelsize=7)
 
-title_site = f"{site_name} | " if site_name else ""
-plt.title(f"{title_site}Windgram | {MODELS[model_name]['desc']} | Lat: {lat}, Lon: {lon}\nColored cells = thermal lift strength, dashed line = cloud base", fontsize=14, pad=15)
-plt.savefig(f"windgram_{model_name}_{lat}_{lon}.png", dpi=150, bbox_inches='tight')
-print(f"Saved: windgram_{model_name}_{lat}_{lon}.png")
+title_site = f"{site_name} " if site_name else ""
+fig.suptitle(f"{title_site}Windgram | {MODELS[model_name]['desc']} | Lat: {lat}, Lon: {lon}",
+             fontsize=14, y=0.97)
+fig.text(0.5, 0.92, "Colored cells = thermal lift strength, dashed line = cloud base",
+         ha='center', fontsize=9, fontweight='normal')
+file_suffix = f"_{site_name}" if site_name else ""
+plt.savefig(f"windgram_{model_name}_{lat}_{lon}{file_suffix}.png", dpi=150, bbox_inches='tight')
+print(f"Saved: windgram_{model_name}_{lat}_{lon}{file_suffix}.png")
