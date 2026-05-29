@@ -3,6 +3,7 @@ import imaplib
 import smtplib
 import email
 import os
+import re
 import sys
 import time
 import io
@@ -98,7 +99,7 @@ def process_igc(part, envelope, igc_path, note=""):
     buf = io.StringIO()
     with redirect_stdout(buf):
         display_summary_stats(results)
-    body = buf.getvalue()
+    body = re.sub(r'\033\[[0-9;]*m', '', buf.getvalue())
 
     display_summary_stats(results)
 

@@ -66,17 +66,9 @@ def detect_turnpoints(details):
 # Core Functions -----------------------------------------------------|
 def create_enhanced_kml(kml_data):
     try:
-        out_file = f"{kml_data['filename'].split('.')[0]}.kml"
+        out_file = f"{kml_data['filename'].rsplit('.', 1)[0]}.kml"
         if os.path.exists(out_file):
             os.remove(out_file)
-
-        colors = {
-            "climb_yellow": "ff00ffff",
-            "climb_orange": "ff0080ff",
-            "glide_green": "ff00ff00",
-            "sink_red": "ff0000ff",
-            "max_alt": "ffff0000"
-        }
 
         lon_lat_alt_list = kml_data.get("lon_lat_alt_list", [])
         details = kml_data.get("details", [])
@@ -99,13 +91,14 @@ def create_enhanced_kml(kml_data):
             'orange': q3
         }
 
+        # KML color format is aabbggrr
         colors = {
             "climb_green": "ff00ff00",
             "climb_yellow": "ff00ffff",
             "climb_orange": "ff0080ff",
-            "climb_red": "ffff0000",
+            "climb_red": "ff0000ff",
             "glide_green": "ff00ff00",
-            "sink_red": "ffff0000"
+            "sink_red": "ff0000ff",
         }
 
         thermals = detect_thermals(details)

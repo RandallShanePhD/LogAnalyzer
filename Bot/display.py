@@ -3,6 +3,15 @@ import datetime as dt
 from base import settings
 from base import convert_meters_to_feet, convert_km_to_miles, convert_ms_to_fpm, haversine
 
+# ANSI color codes
+C_CLIMB = '\033[38;5;82m'    # green
+C_GLIDE = '\033[38;5;39m'    # blue
+C_SINK  = '\033[38;5;196m'   # red
+C_TITLE = '\033[1;97m'       # bold white
+C_STAT  = '\033[38;5;245m'   # grey stats
+C_LABEL = '\033[38;5;227m'   # yellow labels
+C_END   = '\033[0m'          # reset
+
 
 def efficiency_grade_lookup(grade_num, flight_type='thermal'):
     if flight_type == 'soaring':
@@ -46,23 +55,36 @@ def efficiency_grade_lookup(grade_num, flight_type='thermal'):
             return "Poor. Struggling to find or stay in lift. Lots of altitude loss within\n climbs, poor centering, or very weak/active conditions."
 
 
+def _block_color(tyype):
+    if tyype == 'Climb':
+        return C_CLIMB
+    elif tyype == 'Glide':
+        return C_GLIDE
+    elif tyype == 'Sink':
+        return C_SINK
+    return C_END
+
+
 def display_details(details):
     for detail in details:
         altitude_change = detail['altitude_end_m'] - detail['altitude_start_m']
+        bc = _block_color(detail['tyype'])
         print(
-            f"\n Block Number: {detail['number']}   Block Type: {detail['tyype']}   Time in Secs: {detail['time_secs']}")
+            f"\n Block Number: {detail['number']}   {C_TITLE}Block Type: {bc}{detail['tyype']}{C_END}   Time in Secs: {detail['time_secs']}")
         print(
-            f"  Altitude Start: {detail['altitude_start_m']}m | {convert_meters_to_feet(detail['altitude_start_m'])}ft   End: {detail['altitude_end_m']}m | {convert_meters_to_feet(detail['altitude_end_m'])}ft")
+            f"  {C_LABEL}Altitude Start:{C_END} {detail['altitude_start_m']}m | {convert_meters_to_feet(detail['altitude_start_m'])}ft   {C_LABEL}End:{C_END} {detail['altitude_end_m']}m | {convert_meters_to_feet(detail['altitude_end_m'])}ft")
         print(
-            f"  Change in Altitude: {altitude_change}m | {convert_meters_to_feet(altitude_change)}ft   µ Lift: {detail['avg_lift_sink_ms']}m/s | {convert_ms_to_fpm(detail['avg_lift_sink_ms'])}ft/min")
-        print(f"  Location Start: {detail['loc_start']}   End: {detail['loc_end']}")
+            f"  {C_LABEL}Change in Altitude:{C_END} {altitude_change}m | {convert_meters_to_feet(altitude_change)}ft"
+            f"   {C_LABEL}µ Lift:{C_END} {detail['avg_lift_sink_ms']}m/s | {convert_ms_to_fpm(detail['avg_lift_sink_ms'])}ft/min")
+        print(f"  {C_LABEL}Location Start:{C_END} {detail['loc_start']}   {C_LABEL}End:{C_END} {detail['loc_end']}")
         distance = round(haversine(detail['loc_start'], detail['loc_end']) * 1000)
         print(
-            f"  Distance Start-End: {distance}m | {convert_meters_to_feet(distance)}ft   Distance Total: {detail['total_distance_m']}m | {convert_meters_to_feet(detail['total_distance_m'])}ft")
+            f"  {C_LABEL}Distance Start-End:{C_END} {distance}m | {convert_meters_to_feet(distance)}ft"
+            f"   {C_LABEL}Distance Total:{C_END} {detail['total_distance_m']}m | {convert_meters_to_feet(detail['total_distance_m'])}ft")
 
 
 def display_glide_analysis(s):
-    print("GLIDE PERFORMANCE ANALYSIS:")
+    print(f"{C_TITLE}GLIDE PERFORMANCE ANALYSIS:{C_END}")
     stats = s["glide_perf"]
     print(f"  Segments Analyzed: {stats['glide_count']}")
     if stats['glide_count'] == 0:
@@ -187,29 +209,16 @@ def display_summary_stats(s):
     print(f"  Max Lift: {s['max_lift']} m/s || {convert_ms_to_fpm(s['max_lift'])} ft/min")
     print(f"  Max Sink: {s['max_sink']} m/s || {convert_ms_to_fpm(s['max_sink'])} ft/min")
     print("\n\n")
-    print("OVERVIEW:")
-    print(f"  Climbs - Number of Climbs: {s['climbs_num']}")
-    print(f"  Climbs - Max Sustained m/s: {s['max_sustained_climb']} || {convert_ms_to_fpm(s['max_sustained_climb'])} fpm")
-    print(f"  Climbs - µ Sustained: {s['µ_sustained_climb']} m/s || {convert_ms_to_fpm(s['µ_sustained_climb'])} fpm")
-    print(f"  Glides - Number of Glides: {s['glides_num']}")
-    print(f"  Glides - µ Sustained: {s['µ_sustained_glide']} m/s || {convert_ms_to_fpm(s['µ_sustained_glide'])} fpm")
-    print(f"  Glides - µ L/D on Glide: {s['glide_grade']}:1")
-    print(f"  Sinks - Number of Sinks (> {settings['sink_descend_threshold']} m/s | 500fpm): {s['sinks_num']}")
-    print(f"  Sinks - µ Sink Rate: {s['sink_grade']} m/s || {convert_ms_to_fpm(s['sink_grade'])} fpm")
-    climb_ratio = round(
-        s['climbs_num'] / (s['climbs_num'] + s['glides_num'] + s['sinks_num']) * 100, 2)
-    print(f"  You are climbing {climb_ratio}% of the flight")
-    glide_ratio = round(
-        s['glides_num'] / (s['climbs_num'] + s['glides_num'] + s['sinks_num']) * 100, 2)
-    print(f"  You are gliding {glide_ratio}% of the flight")
-    sink_ratio = round(
-        s['sinks_num'] / (s['climbs_num'] + s['glides_num'] + s['sinks_num']) * 100, 2)
-    print(f"  You are sinking {sink_ratio}% of the flight")
-    print("\n\n")
-
-    print(f"EFFICIENCY GRADE:")
-    print(f"  ({s.get('flight_type', 'thermal').upper()}): {s['climb_grade']}%")
-    narative = efficiency_grade_lookup(s['climb_grade'], s.get('flight_type', 'thermal'))
+    grade = s['climb_grade']
+    if grade >= 75:
+        gc = C_CLIMB
+    elif grade >= 45:
+        gc = C_GLIDE
+    else:
+        gc = C_SINK
+    print(f"{C_TITLE}EFFICIENCY GRADE:{C_END}")
+    print(f"  ({s.get('flight_type', 'thermal').upper()}): {gc}{grade}%{C_END}")
+    narative = efficiency_grade_lookup(grade, s.get('flight_type', 'thermal'))
     print(f"\t{narative}")
 
     print("\n\n")
