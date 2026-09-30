@@ -1,0 +1,328 @@
+FLIGHT:
+ File: 2026-05-19-First_ALP_Flight.igc
+ Pilot: Randall Shane
+ Glider: SupAir Wild
+ Vario: Naviter SeeYou Navigator
+
+
+
+STATISTICS:
+ Flight Type: THERMAL
+ Date: 19 May 2026
+ Duration: 1:49:34
+ Takeoff GPS: (43.62332, -115.98078)
+ Takeoff DateTime: 2026-5-19 23:49:55
+ Takeoff Altitude: 1200 m || 3937 ft
+ Takeoff Heading: 269°
+ Landing GPS: (43.62098, -115.98928)
+ Landing DateTime: 2026-5-19 1:39:29
+ Landing Altitude: 988 m || 3241 ft
+ Landing Heading: 90°
+ Distance Total: 55.7 km || 34.6 mi
+ Flight Area Diameter: 4.36 km || 2.7 mi
+ Takeoff to Landing: 0.7 km || 0.4 mi
+ Max Altitude: 2520 m || 8268 ft
+ Max Lift: 3.9 m/s || 768 ft/min
+ Max Sink: -2.9 m/s || -571 ft/min
+
+
+
+OVERVIEW:
+ Climbs - Number of Climbs: 52
+ Climbs - Max Sustained m/s: 2.6 || 512 fpm
+ Climbs - µ Sustained: 1.26 m/s || 248 fpm
+ Glides - Number of Glides: 26
+ Glides - µ Sustained: -0.42 m/s || -83 fpm
+ Glides - µ L/D on Glide: 10.34:1
+ Sinks - Number of Sinks (> 2.5 m/s | 500fpm): 9
+ Sinks - µ Sink Rate: 2.8 m/s || 551 fpm
+ You are climbing 59.77% of the flight
+ You are gliding 29.89% of the flight
+ You are sinking 10.34% of the flight
+
+
+
+EFFICIENCY GRADE:
+ (THERMAL): 72.81%
+    Good. Solid flying. You're finding lift and making progress, but
+there's room to tighten your circles or react faster.
+
+
+
+GLIDE PERFORMANCE ANALYSIS:
+ Segments Analyzed: 22
+
+ BEST GLIDE:
+   Glide Ratio: 18.38:1
+   Altitude: 1747 m || 5732 ft
+   Sink Rate: 0.3 m/s
+
+ AVERAGE GLIDE:
+   Glide Ratio: 9.21:1
+   Average Altitude: 1758.3 m || 5769 ft
+   Average Sink Rate: 1.09 m/s || 215 fpm
+   Overall Glide Ratio: 9.21:1
+
+ SPEED-TO-FLY (MacReady):
+   Optimal MacReady Setting: 1.26 m/s || 248 fpm
+   Average Speed: 30.5 km/h || 19.0 mph
+   Average Climb Rate: 1.26 m/s || 248 fpm
+   Cruise Efficiency: 50.1%
+
+ INTERPRETATION:
+   Consider optimizing cruise speed for conditions
+    Top 5 Glides by L/D:
+      #1: L/D 18.38:1 | Alt 1747m | Sink 0.3 m/s | Dist 1176m
+      #2: L/D 18.17:1 | Alt 1574m | Sink 0.6 m/s | Dist 327m
+      #3: L/D 14.64:1 | Alt 1560m | Sink 0.4 m/s | Dist 1713m
+      #4: L/D 14.51:1 | Alt 1567m | Sink 0.3 m/s | Dist 595m
+      #5: L/D 13.93:1 | Alt 1696m | Sink 1.2 m/s | Dist 2522m
+
+Polar Glide Curve (sink rate vs glide ratio):
+----------------------------------------
+ Sink (m/s)   L/D      Alt (m)   
+----------------------------------------
+ 1.50         5.00     1900      
+ 1.80         6.19     1499      
+ 1.10         7.54     1477      
+ 1.10         8.11     1645      
+ 0.90         8.49     1639      
+ 0.40         10.93    1734      
+ 1.10         11.94    1591      
+ 0.70         13.46    1401      
+ 1.20         13.93    1696      
+ 0.40         14.64    1560      
+
+
+
+THERMAL ANALYSIS:
+ Thermal Count: 16
+ Average Thermal Strength: 1.54 m/s || 303 fpm
+ Max Thermal Strength: 2.6 m/s || 512 fpm
+ Min Thermal Strength: 0.6 m/s || 118 fpm
+ Average Thermal Duration: 80 seconds
+ Total Time in Thermals: 1280 seconds (19.3% of flight)
+ Average Altitude Gain per Thermal: 121.8 m || 400 ft
+ Total Altitude Gained in Thermals: 1948 m || 6391 ft
+
+ Thermal #1:
+   Duration: 80s | Strength: 1.5 m/s (295 fpm)
+   Altitude: 1553 m -> 1673 m (gain: 120m)
+             5095 ft -> 5489 ft (gain: 394 ft)
+   Location: (43.653933333333335, -115.95953333333334)
+
+ Thermal #2:
+   Duration: 30s | Strength: 2.4 m/s (472 fpm)
+   Altitude: 1690 m -> 1753 m (gain: 63m)
+             5545 ft -> 5751 ft (gain: 207 ft)
+   Location: (43.6574, -115.95533333333333)
+
+ Thermal #3:
+   Duration: 40s | Strength: 1.2 m/s (236 fpm)
+   Altitude: 1447 m -> 1498 m (gain: 51m)
+             4747 ft -> 4915 ft (gain: 167 ft)
+   Location: (43.6393, -115.97156666666666)
+
+ Thermal #4:
+   Duration: 70s | Strength: 1.4 m/s (276 fpm)
+   Altitude: 1510 m -> 1615 m (gain: 105m)
+             4954 ft -> 5299 ft (gain: 344 ft)
+   Location: (43.629083333333334, -115.97198333333333)
+
+ Thermal #5:
+   Duration: 70s | Strength: 1.8 m/s (354 fpm)
+   Altitude: 1583 m -> 1714 m (gain: 131m)
+             5194 ft -> 5623 ft (gain: 430 ft)
+   Location: (43.6228, -115.98)
+
+ Thermal #6:
+   Duration: 100s | Strength: 1.3 m/s (256 fpm)
+   Altitude: 1718 m -> 1849 m (gain: 131m)
+             5636 ft -> 6066 ft (gain: 430 ft)
+   Location: (43.62178333333333, -115.98031666666667)
+
+ Thermal #7:
+   Duration: 100s | Strength: 1.1 m/s (217 fpm)
+   Altitude: 1505 m -> 1614 m (gain: 109m)
+             4938 ft -> 5295 ft (gain: 358 ft)
+   Location: (43.6246, -115.9822)
+
+ Thermal #8:
+   Duration: 80s | Strength: 0.6 m/s (118 fpm)
+   Altitude: 1489 m -> 1544 m (gain: 55m)
+             4885 ft -> 5066 ft (gain: 180 ft)
+   Location: (43.62873333333334, -115.98883333333333)
+
+ Thermal #9:
+   Duration: 170s | Strength: 1.4 m/s (276 fpm)
+   Altitude: 1644 m -> 1884 m (gain: 240m)
+             5394 ft -> 6181 ft (gain: 787 ft)
+   Location: (43.62376666666667, -115.98265)
+
+ Thermal #10:
+   Duration: 70s | Strength: 1.0 m/s (197 fpm)
+   Altitude: 1728 m -> 1796 m (gain: 68m)
+             5669 ft -> 5892 ft (gain: 223 ft)
+   Location: (43.635016666666665, -115.9857)
+
+ Thermal #11:
+   Duration: 110s | Strength: 1.1 m/s (217 fpm)
+   Altitude: 1836 m -> 1962 m (gain: 126m)
+             6024 ft -> 6437 ft (gain: 413 ft)
+   Location: (43.633766666666666, -115.98581666666666)
+
+ Thermal #12:
+   Duration: 50s | Strength: 1.4 m/s (276 fpm)
+   Altitude: 1968 m -> 2036 m (gain: 68m)
+             6457 ft -> 6680 ft (gain: 223 ft)
+   Location: (43.63321666666667, -115.98733333333334)
+
+ Thermal #13:
+   Duration: 40s | Strength: 2.1 m/s (413 fpm)
+   Altitude: 2068 m -> 2151 m (gain: 83m)
+             6785 ft -> 7057 ft (gain: 272 ft)
+   Location: (43.63211666666667, -115.98436666666667)
+
+ Thermal #14:
+   Duration: 170s | Strength: 2.6 m/s (512 fpm)
+   Altitude: 1284 m -> 1695 m (gain: 411m)
+             4213 ft -> 5561 ft (gain: 1348 ft)
+   Location: (43.625, -115.98225)
+
+ Thermal #15:
+   Duration: 40s | Strength: 1.9 m/s (374 fpm)
+   Altitude: 1567 m -> 1639 m (gain: 72m)
+             5141 ft -> 5377 ft (gain: 236 ft)
+   Location: (43.62661666666666, -115.9773)
+
+ Thermal #16:
+   Duration: 60s | Strength: 1.9 m/s (374 fpm)
+   Altitude: 1639 m -> 1754 m (gain: 115m)
+             5377 ft -> 5755 ft (gain: 377 ft)
+   Location: (43.62805, -115.97311666666667)
+
+
+
+DETAILED FLIGHT INSPECTION OF BLOCKS OVER 90 SECONDS LONG:
+    Blocks in Flight: 121
+
+
+Block Number: 9   Block Type: Glide   Time in Secs: 170
+ Altitude Start: 1737m | 5699ft   End: 1554m | 5098ft
+ Change in Altitude: -183m | -600ft   µ Lift: -1.1m/s | -217ft/min
+ Location Start: (43.64116666666666, -115.96275)   End: (43.653866666666666, -115.95956666666666)
+ Distance Start-End: 1436m | 4711ft   Distance Total: 1484m | 4869ft
+
+Block Number: 17   Block Type: Glide   Time in Secs: 210
+ Altitude Start: 1741m | 5712ft   End: 1537m | 5043ft
+ Change in Altitude: -204m | -669ft   µ Lift: -0.9m/s | -177ft/min
+ Location Start: (43.657016666666664, -115.9589)   End: (43.64671666666667, -115.96603333333333)
+ Distance Start-End: 1281m | 4203ft   Distance Total: 1731m | 5679ft
+
+Block Number: 40   Block Type: Climb   Time in Secs: 100
+ Altitude Start: 1718m | 5636ft   End: 1849m | 6066ft
+ Change in Altitude: 131m | 430ft   µ Lift: 1.3m/s | 256ft/min
+ Location Start: (43.62178333333333, -115.98031666666667)   End: (43.61906666666667, -115.97783333333334)
+ Distance Start-End: 362m | 1188ft   Distance Total: 949m | 3114ft
+
+Block Number: 44   Block Type: Climb   Time in Secs: 400
+ Altitude Start: 1882m | 6175ft   End: 2510m | 8235ft
+ Change in Altitude: 628m | 2060ft   µ Lift: 1.6m/s | 315ft/min
+ Location Start: (43.61756666666667, -115.97693333333333)   End: (43.60438333333333, -115.9623)
+ Distance Start-End: 1881m | 6171ft   Distance Total: 3991m | 13094ft
+
+Block Number: 45   Block Type: Glide   Time in Secs: 200
+ Altitude Start: 2512m | 8241ft   End: 2213m | 7260ft
+ Change in Altitude: -299m | -981ft   µ Lift: -1.6m/s | -315ft/min
+ Location Start: (43.60438333333333, -115.96241666666667)   End: (43.61226666666666, -115.9739)
+ Distance Start-End: 1274m | 4180ft   Distance Total: 1355m | 4446ft
+
+Block Number: 47   Block Type: Glide   Time in Secs: 200
+ Altitude Start: 2219m | 7280ft   End: 2016m | 6614ft
+ Change in Altitude: -203m | -666ft   µ Lift: -0.9m/s | -177ft/min
+ Location Start: (43.612766666666666, -115.9747)   End: (43.62335, -115.97958333333334)
+ Distance Start-End: 1241m | 4072ft   Distance Total: 1306m | 4285ft
+
+Block Number: 53   Block Type: Glide   Time in Secs: 210
+ Altitude Start: 1889m | 6198ft   End: 1709m | 5607ft
+ Change in Altitude: -180m | -591ft   µ Lift: -0.8m/s | -157ft/min
+ Location Start: (43.628166666666665, -115.9843)   End: (43.639716666666665, -115.99348333333333)
+ Distance Start-End: 1482m | 4862ft   Distance Total: 1514m | 4967ft
+
+Block Number: 55   Block Type: Glide   Time in Secs: 170
+ Altitude Start: 1676m | 5499ft   End: 1506m | 4941ft
+ Change in Altitude: -170m | -558ft   µ Lift: -1.1m/s | -217ft/min
+ Location Start: (43.6394, -115.99401666666667)   End: (43.62466666666667, -115.98235)
+ Distance Start-End: 1889m | 6198ft   Distance Total: 2030m | 6660ft
+
+Block Number: 56   Block Type: Climb   Time in Secs: 100
+ Altitude Start: 1505m | 4938ft   End: 1614m | 5295ft
+ Change in Altitude: 109m | 358ft   µ Lift: 1.1m/s | 217ft/min
+ Location Start: (43.6246, -115.9822)   End: (43.6225, -115.9766)
+ Distance Start-End: 508m | 1667ft   Distance Total: 1034m | 3392ft
+
+Block Number: 59   Block Type: Glide   Time in Secs: 270
+ Altitude Start: 1619m | 5312ft   End: 1502m | 4928ft
+ Change in Altitude: -117m | -384ft   µ Lift: -0.4m/s | -79ft/min
+ Location Start: (43.62211666666666, -115.97851666666666)   End: (43.624316666666665, -115.99098333333333)
+ Distance Start-End: 1033m | 3389ft   Distance Total: 1713m | 5620ft
+
+Block Number: 72   Block Type: Climb   Time in Secs: 170
+ Altitude Start: 1644m | 5394ft   End: 1884m | 6181ft
+ Change in Altitude: 240m | 787ft   µ Lift: 1.4m/s | 276ft/min
+ Location Start: (43.62376666666667, -115.98265)   End: (43.61895, -115.97461666666666)
+ Distance Start-End: 840m | 2756ft   Distance Total: 1785m | 5856ft
+
+Block Number: 77   Block Type: Glide   Time in Secs: 110
+ Altitude Start: 1904m | 6247ft   End: 1775m | 5823ft
+ Change in Altitude: -129m | -423ft   µ Lift: -1.3m/s | -256ft/min
+ Location Start: (43.61805, -115.97571666666667)   End: (43.62303333333333, -115.9806)
+ Distance Start-End: 680m | 2231ft   Distance Total: 721m | 2365ft
+
+Block Number: 79   Block Type: Glide   Time in Secs: 160
+ Altitude Start: 1779m | 5837ft   End: 1715m | 5627ft
+ Change in Altitude: -64m | -210ft   µ Lift: -0.3m/s | -59ft/min
+ Location Start: (43.62361666666666, -115.98103333333333)   End: (43.63248333333333, -115.98478333333334)
+ Distance Start-End: 1031m | 3383ft   Distance Total: 1176m | 3858ft
+
+Block Number: 86   Block Type: Climb   Time in Secs: 110
+ Altitude Start: 1836m | 6024ft   End: 1962m | 6437ft
+ Change in Altitude: 126m | 413ft   µ Lift: 1.1m/s | 217ft/min
+ Location Start: (43.633766666666666, -115.98581666666666)   End: (43.633766666666666, -115.98676666666667)
+ Distance Start-End: 76m | 249ft   Distance Total: 1040m | 3412ft
+
+Block Number: 95   Block Type: Glide   Time in Secs: 270
+ Altitude Start: 2185m | 7169ft   End: 1892m | 6207ft
+ Change in Altitude: -293m | -961ft   µ Lift: -1.2m/s | -236ft/min
+ Location Start: (43.63891666666667, -115.982)   End: (43.65475, -115.97741666666667)
+ Distance Start-End: 1799m | 5902ft   Distance Total: 1861m | 6106ft
+
+Block Number: 97   Block Type: Glide   Time in Secs: 170
+ Altitude Start: 1787m | 5863ft   End: 1606m | 5269ft
+ Change in Altitude: -181m | -594ft   µ Lift: -1.2m/s | -236ft/min
+ Location Start: (43.6498, -115.97978333333333)   End: (43.62866666666667, -115.9896)
+ Distance Start-End: 2480m | 8136ft   Distance Total: 2522m | 8274ft
+
+Block Number: 101   Block Type: Glide   Time in Secs: 880
+ Altitude Start: 1606m | 5269ft   End: 1197m | 3927ft
+ Change in Altitude: -409m | -1342ft   µ Lift: -0.7m/s | -138ft/min
+ Location Start: (43.61781666666667, -115.99395)   End: (43.623333333333335, -115.98101666666666)
+ Distance Start-End: 1209m | 3967ft   Distance Total: 5506m | 18064ft
+
+Block Number: 112   Block Type: Climb   Time in Secs: 170
+ Altitude Start: 1284m | 4213ft   End: 1695m | 5561ft
+ Change in Altitude: 411m | 1348ft   µ Lift: 2.6m/s | 512ft/min
+ Location Start: (43.625, -115.98225)   End: (43.62395, -115.9808)
+ Distance Start-End: 165m | 541ft   Distance Total: 1460m | 4790ft
+
+
+
+
+
+Analysis Complete - KML file for Google Earth attached.
+Thanks for using the WanderBot IGC analyzer.
+
+    Blue skies!!
+    Wander Expeditions LLC
+
+
